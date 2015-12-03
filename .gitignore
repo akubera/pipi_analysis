@@ -17,6 +17,7 @@ LednickyEqn
 
 /*.cxx
 /*.h
+/*.C
 
 .project
 .cproject
