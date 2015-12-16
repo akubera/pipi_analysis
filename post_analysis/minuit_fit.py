@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# post_analysis/fit.py
+# post_analysis/minuit_fit.py
 #
 
 import sys
@@ -10,8 +10,10 @@ from fit_params import (
     FitParam,
     fit_params,
 )
+from root_helpers import get_root_object
 from ROOT import TFile
 from ROOT import TMinuit
+
 
 parser = ArgumentParser()
 parser.add_argument("filename", help="root filename to analyze")
@@ -19,15 +21,11 @@ args = parser.parse_args()
 
 file = TFile(args.filename, 'READ')
 
-femtolist = file.Get("femtolist")
+femtolist = get_root_object(file, ['femtolist', 'PWG2FEMTO.femtolist'])
 
 if femtolist == None:
-    femtolist = file.Get("PWG2FEMTO").Get("femtolist")
-
-    if femtolist == None:
-        print("Could not find femtolist", file=sys.stderr)
-        sys.exit(1)
-
+    print("Could not find femtolist", file=sys.stderr)
+    sys.exit(1)
 
 num = femtolist.FindObject("Numcqinv_pip_tpcM0")
 den = femtolist.FindObject("Dencqinv_pip_tpcM0")
@@ -40,14 +38,10 @@ den_scale = 1.0 / den.Integral(*map(den.FindBin, fit_range))
 
 ratio = num.Clone("ratio")
 ratio.Divide(num, den, num_scale, den_scale)
-ratio.SetTitle(r"\pi^{+}\pi^{+} CF; q_{inv} (GeV); C(q_{inv})")
+ratio.SetTitle(r"#pi^{+} CF; q_{inv} (GeV); C(q_{inv})")
 ratio.GetXaxis().SetRangeUser(0, 0.5)
 # ratio.Draw()
 
-# input()
-
-print(file)
-# params = FitParams()
 fitter = TMinuit()
 
 for i, param in enumerate(fit_params):
