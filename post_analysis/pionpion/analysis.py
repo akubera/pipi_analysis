@@ -19,3 +19,9 @@ class Analysis:
         Forwards any missing attribute to the underlaying TObjArray
         """
         return getattr(self._data, name)
+
+    def __getitem__(self, name):
+        """
+        Returns the object found at the path given in the name.
+        """
+        return get_root_object(self._data, name)

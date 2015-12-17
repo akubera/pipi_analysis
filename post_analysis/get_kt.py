@@ -48,9 +48,10 @@ for analysis in femtolist:
     output.mkdir(analysis_name)
     output.cd(analysis_name)
 
-    kt = get_root_object(analysis, "Pair.pass.kt")
+    kt = analysis["Pair.pass.kt"]
     if kt == None:
         continue
+
     kt.Write()
 
 output.Write()
