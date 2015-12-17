@@ -1,4 +1,4 @@
- 
+
 *.root
 *.xml
 *.jdl
@@ -7,6 +7,7 @@
 *.so
 *.o
 *.txt
+*.py[co]
 
 !scripts/*.sh
 

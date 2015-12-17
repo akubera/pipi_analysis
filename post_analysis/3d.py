@@ -17,7 +17,7 @@ from fit_params import (
     fit_params,
 )
 from lmfit import minimize, Parameters, report_fit
-from root_helpers import get_root_object
+from pionpion.root_helpers import get_root_object
 from hist_helpers import bin_range as BinRange
 import ROOT
 from ROOT import (
@@ -182,10 +182,12 @@ for analysis in femtolist:
     yzero = ratio.GetYaxis().FindBin(0.0)
     zzero = ratio.GetZaxis().FindBin(0.0)
 
-    bin_sep = 2
+    bin_sep = 1
     xmin, xmax = xzero - bin_sep, xzero + bin_sep
     ymin, ymax = yzero - bin_sep, yzero + bin_sep
     zmin, zmax = zzero - bin_sep, zzero + bin_sep
+
+    print(zmin, zmax)
 
     qo_binrange = BinRange(ratio,
                            y_bin_range=(ymin, ymax + 1),

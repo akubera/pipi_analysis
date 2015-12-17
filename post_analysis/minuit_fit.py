@@ -10,7 +10,7 @@ from fit_params import (
     FitParam,
     fit_params,
 )
-from root_helpers import get_root_object
+from pionpion.root_helpers import get_root_object
 from ROOT import TFile
 from ROOT import TMinuit
 
