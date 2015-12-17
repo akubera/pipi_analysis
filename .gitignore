@@ -6,6 +6,7 @@
 *.d
 *.so
 *.o
+*.txt
 
 !scripts/*.sh
 
@@ -32,3 +33,7 @@ runs
 .db
 
 __pycache__
+
+data
+
+venv*/
