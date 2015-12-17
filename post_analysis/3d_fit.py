@@ -183,6 +183,23 @@ for analysis in femtolist:
     ratio_qo.SetTitle(make_cf_title(title='Q_{out}', units='q_{out}'))
     ratio_qo.Write()
 
+    X_Zero = ratio_qo.GetXaxis().FindBin(0)
+    Y_Zero = ratio_qo.GetYaxis().FindBin(0)
+    Z_Zero = ratio_qo.GetZaxis().FindBin(0)
+
+    bin_offset = 4
+
+    bins = {
+        'xmin': X_Zero - bin_offset,
+        'xmax': X_Zero + bin_offset,
+        'ymin': Y_Zero - bin_offset,
+        'ymax': Y_Zero + bin_offset,
+        'zmin': Z_Zero - bin_offset,
+        'zmax': Z_Zero + bin_offset,
+    }
+
+
+
     num_qside = q3d_num.ProjectionY("num_qside")
     den_qside = q3d_den.ProjectionY("den_qside")
 
@@ -249,6 +266,19 @@ for analysis in femtolist:
     fit_plot.Draw("same")
     canvas_qinv.Draw()
 
+
+
+    #
+    # Qinv - Kt binned
+    #
+    kt_qinv = get_root_object(analysis, ["KT_Qinv"])
+    if kt_qinv != None:
+        for ktbin in kt_qinv:
+            ktn = get_root_object(ktbin, ["Numc_qinv_pip", "Numc_qinv_pim"])
+            ktd = get_root_object(ktbin, ["Denc_qinv_pip", "Denc_qinv_pim"])
+
+
+
     continue
 
     #
@@ -270,7 +300,21 @@ for analysis in femtolist:
     qinv_params.add('r_out', value=0.5, min=0.0)
     qinv_params.add('r_side', value=0.5, min=0.0)
     qinv_params.add('r_long', value=0.5, min=0.0)
-    qinv_params.add('lam', value=0.5, min=0.0, max=1.0)
+    qinv_params.add('lam', value=0.5, min=-10.0, max=10.0)
+
+    def fit_3d_q(params, osl, data=None):
+        """
+        Do 3D Gaussian fit of data.
+
+        y = 1 + λ exp( -((qo * [Ro])^2 + (qs * [Rs])^2 + (ql * [Rl])^2) )
+
+        """
+        # split x into components
+        o, s, l = osl
+        t = sum((o * params['r_out']) ** 2, (s * params['r_side']) ** 2, (l * params['r_long']) ** 2)
+        model = 1 + params['lam'] * np.exp(list(-t))
+        if data is None:
+            return model
 
 
 
