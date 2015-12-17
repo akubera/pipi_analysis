@@ -12,7 +12,8 @@ bool is_mc_analysis = false;
 TString grid_output_dir = "output";
 TString grid_working_dir = "PiPi_v02";
 
-TString runmode = "full";
+//TString runmode = "full";
+TString runmode = "terminate";
 TString run_xml_file;
 
 
@@ -76,7 +77,7 @@ RunGrid()
   }
 
   alienHandler->SetOverwriteMode();
-  alienHandler->SetRunMode("full");
+  alienHandler->SetRunMode(runmode);
   alienHandler->SetAPIVersion("V1.1x");
   alienHandler->SetAliPhysicsVersion("vAN-20151203-1");
   alienHandler->SetRunPrefix("000");
