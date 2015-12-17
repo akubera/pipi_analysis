@@ -132,220 +132,230 @@ AliFemtoManager* ConfigFemtoAnalysis() {
     if (runmults[imult]) {
 
       for (int ichg = 0; ichg < numOfChTypes; ichg++) {
-	if (runch[ichg]) {
 
-	  aniter = ichg * numOfMultBins + imult;
-	  anetaphitpc[aniter] = new AliFemtoVertexMultAnalysis(8, -8.0, 8.0, 4, multbins[imult], multbins[imult+1]);
-	  anetaphitpc[aniter]->SetNumEventsToMix(10);
-	  anetaphitpc[aniter]->SetMinSizePartCollection(1);
+        if (!runch[ichg]) {
+          continue;
+        }
 
-	  mecetaphitpc[aniter] = new AliFemtoBasicEventCut();
-	  mecetaphitpc[aniter]->SetEventMult(0.001,100000);
-	  mecetaphitpc[aniter]->SetVertZPos(-8,8);
+        aniter = ichg * numOfMultBins + imult;
+        anetaphitpc[aniter] = new AliFemtoVertexMultAnalysis(
+          8, -8.0, 8.0, 4, multbins[imult], multbins[imult+1]
+        );
+        anetaphitpc[aniter]->SetNumEventsToMix(10);
+        anetaphitpc[aniter]->SetMinSizePartCollection(1);
 
-	  if (isrealdata)
-	    mecetaphitpc[aniter]->SetAcceptOnlyPhysics(kTRUE);
+        mecetaphitpc[aniter] = new AliFemtoBasicEventCut();
+        mecetaphitpc[aniter]->SetEventMult(0.001,100000);
+        mecetaphitpc[aniter]->SetVertZPos(-8,8);
 
-	  cutPassEvMetaphitpc[aniter] = new AliFemtoCutMonitorEventMult(Form("cutPass%stpcM%i", chrgs[ichg], imult));
-	  cutFailEvMetaphitpc[aniter] = new AliFemtoCutMonitorEventMult(Form("cutFail%stpcM%i", chrgs[ichg], imult));
-	  mecetaphitpc[aniter]->AddCutMonitor(cutPassEvMetaphitpc[aniter], cutFailEvMetaphitpc[aniter]);
+        if (isrealdata)
+          mecetaphitpc[aniter]->SetAcceptOnlyPhysics(kTRUE);
 
-	  cutPassEvVetaphitpc[aniter] = new AliFemtoCutMonitorEventVertex(Form("cutPass%stpcM%i", chrgs[ichg], imult));
-	  cutFailEvVetaphitpc[aniter] = new AliFemtoCutMonitorEventVertex(Form("cutFail%stpcM%i", chrgs[ichg], imult));
-	  mecetaphitpc[aniter]->AddCutMonitor(cutPassEvVetaphitpc[aniter], cutFailEvVetaphitpc[aniter]);
+        cutPassEvMetaphitpc[aniter] = new AliFemtoCutMonitorEventMult(Form("cutPass%stpcM%i", chrgs[ichg], imult));
+        cutFailEvMetaphitpc[aniter] = new AliFemtoCutMonitorEventMult(Form("cutFail%stpcM%i", chrgs[ichg], imult));
+        mecetaphitpc[aniter]->AddCutMonitor(cutPassEvMetaphitpc[aniter], cutFailEvMetaphitpc[aniter]);
 
-	  dtc1etaphitpc[aniter] = new AliFemtoESDTrackCut();
-	  dtc2etaphitpc[aniter] = new AliFemtoESDTrackCut();
+        cutPassEvVetaphitpc[aniter] = new AliFemtoCutMonitorEventVertex(Form("cutPass%stpcM%i", chrgs[ichg], imult));
+        cutFailEvVetaphitpc[aniter] = new AliFemtoCutMonitorEventVertex(Form("cutFail%stpcM%i", chrgs[ichg], imult));
+        mecetaphitpc[aniter]->AddCutMonitor(cutPassEvVetaphitpc[aniter], cutFailEvVetaphitpc[aniter]);
 
-	  if (ichg == 0)
-	    dtc1etaphitpc[aniter]->SetCharge(1.0);
-	  else if (ichg == 1)
-	    dtc1etaphitpc[aniter]->SetCharge(-1.0);
-	  else if (ichg == 2) {
-    	    dtc1etaphitpc[aniter]->SetCharge(-1.0);
-	    dtc2etaphitpc[aniter]->SetCharge(1.0);
-	  }
+        dtc1etaphitpc[aniter] = new AliFemtoESDTrackCut();
+        dtc2etaphitpc[aniter] = new AliFemtoESDTrackCut();
 
-	  dtc1etaphitpc[aniter]->SetEta(-0.8,0.8);
-	  dtc1etaphitpc[aniter]->SetMass(PionMass);
-	  dtc1etaphitpc[aniter]->SetMostProbablePion();
+        if (ichg == 0)
+          dtc1etaphitpc[aniter]->SetCharge(1.0);
+        else if (ichg == 1)
+          dtc1etaphitpc[aniter]->SetCharge(-1.0);
+        else if (ichg == 2) {
+          dtc1etaphitpc[aniter]->SetCharge(-1.0);
+          dtc2etaphitpc[aniter]->SetCharge(1.0);
+        }
 
-	  if (ichg == 2) {
-	    dtc2etaphitpc[aniter]->SetEta(-0.8,0.8);
-	    dtc2etaphitpc[aniter]->SetMass(PionMass);
-	    dtc2etaphitpc[aniter]->SetMostProbablePion();
-	  }
+        dtc1etaphitpc[aniter]->SetEta(-0.8,0.8);
+        dtc1etaphitpc[aniter]->SetMass(PionMass);
+        dtc1etaphitpc[aniter]->SetMostProbablePion();
 
-	  // Track quality cuts
+        if (ichg == 2) {
+          dtc2etaphitpc[aniter]->SetEta(-0.8,0.8);
+          dtc2etaphitpc[aniter]->SetMass(PionMass);
+          dtc2etaphitpc[aniter]->SetMostProbablePion();
+        }
 
-	  if (runtype == 0) {
-	    dtc1etaphitpc[aniter]->SetStatus(AliESDtrack::kTPCrefit|AliESDtrack::kITSrefit);
-	    //	    dtc1etaphitpc[aniter]->SetStatus(AliESDtrack::kTPCrefit);
-	    //    dtc1etaphitpc[aniter]->SetStatus(AliESDtrack::kITSrefit);
-	    dtc1etaphitpc[aniter]->SetminTPCncls(80);
-	    dtc1etaphitpc[aniter]->SetRemoveKinks(kTRUE);
-	    dtc1etaphitpc[aniter]->SetLabel(kFALSE);
-	    //    dtc1etaphitpc[aniter]->SetMaxITSChiNdof(6.0);
-	    dtc1etaphitpc[aniter]->SetMaxTPCChiNdof(4.0);
-	    dtc1etaphitpc[aniter]->SetMaxImpactXY(0.2);
-	    //            dtc1etaphitpc[aniter]->SetMaxImpactXYPtDep(0.0182, 0.0350, -1.01);
-	    dtc1etaphitpc[aniter]->SetMaxImpactZ(0.15);
-	    //      dtc1etaphitpc[aniter]->SetMaxSigmaToVertex(6.0);
-	  }
-	  else if (runtype == 1) {
-	    //      dtc1etaphitpc[aniter]->SetStatus(AliESDtrack::kTPCrefit|AliESDtrack::kITSrefit);
-	    //    dtc1etaphitpc[aniter]->SetStatus(AliESDtrack::kTPCrefit);
-	    //	    dtc1etaphitpc[aniter]->SetStatus(AliESDtrack::kITSrefit|AliESDtrack::kITSpureSA);
-	    //      dtc1etaphitpc[aniter]->SetminTPCncls(70);
-	    dtc1etaphitpc[aniter]->SetStatus(AliESDtrack::kITSrefit);
-	    dtc1etaphitpc[aniter]->SetRemoveKinks(kTRUE);
-	    dtc1etaphitpc[aniter]->SetLabel(kFALSE);
-	    //    dtc1etaphitpc[aniter]->SetMaxITSChiNdof(6.0);
-	    //      dtc1etaphitpc[aniter]->SetMaxTPCChiNdof(6.0);
-	    dtc1etaphitpc[aniter]->SetMaxImpactXY(0.2);
-	    dtc1etaphitpc[aniter]->SetMaxImpactZ(0.25);
-	    //      dtc1etaphitpc[aniter]->SetMaxSigmaToVertex(6.0);
-	  }
-	  else if (runtype == 2) {
-	    dtc1etaphitpc[aniter]->SetStatus(AliESDtrack::kTPCin);
-	    dtc1etaphitpc[aniter]->SetminTPCncls(80);
-	    dtc1etaphitpc[aniter]->SetRemoveKinks(kTRUE);
-	    dtc1etaphitpc[aniter]->SetLabel(kFALSE);
-	    dtc1etaphitpc[aniter]->SetMaxTPCChiNdof(4.0);
-	    dtc1etaphitpc[aniter]->SetMaxImpactXY(2.4);
-	    dtc1etaphitpc[aniter]->SetMaxImpactZ(3.0);
+        // Track quality cuts
 
-	    if (ichg == 2) {
-	      dtc2etaphitpc[aniter]->SetStatus(AliESDtrack::kTPCin);
-	      dtc2etaphitpc[aniter]->SetminTPCncls(80);
-	      dtc2etaphitpc[aniter]->SetRemoveKinks(kTRUE);
-	      dtc2etaphitpc[aniter]->SetLabel(kFALSE);
-	      dtc2etaphitpc[aniter]->SetMaxTPCChiNdof(4.0);
-	      dtc2etaphitpc[aniter]->SetMaxImpactXY(0.25);
-	      dtc2etaphitpc[aniter]->SetMaxImpactZ(0.15);
-	    }
+        if (runtype == 0) {
+          dtc1etaphitpc[aniter]->SetStatus(AliESDtrack::kTPCrefit|AliESDtrack::kITSrefit);
+          //	    dtc1etaphitpc[aniter]->SetStatus(AliESDtrack::kTPCrefit);
+          //    dtc1etaphitpc[aniter]->SetStatus(AliESDtrack::kITSrefit);
+          dtc1etaphitpc[aniter]->SetminTPCncls(80);
+          dtc1etaphitpc[aniter]->SetRemoveKinks(kTRUE);
+          dtc1etaphitpc[aniter]->SetLabel(kFALSE);
+          //    dtc1etaphitpc[aniter]->SetMaxITSChiNdof(6.0);
+          dtc1etaphitpc[aniter]->SetMaxTPCChiNdof(4.0);
+          dtc1etaphitpc[aniter]->SetMaxImpactXY(0.2);
+          //            dtc1etaphitpc[aniter]->SetMaxImpactXYPtDep(0.0182, 0.0350, -1.01);
+          dtc1etaphitpc[aniter]->SetMaxImpactZ(0.15);
+          //      dtc1etaphitpc[aniter]->SetMaxSigmaToVertex(6.0);
+        }
+        else if (runtype == 1) {
+          //      dtc1etaphitpc[aniter]->SetStatus(AliESDtrack::kTPCrefit|AliESDtrack::kITSrefit);
+          //    dtc1etaphitpc[aniter]->SetStatus(AliESDtrack::kTPCrefit);
+          //	    dtc1etaphitpc[aniter]->SetStatus(AliESDtrack::kITSrefit|AliESDtrack::kITSpureSA);
+          //      dtc1etaphitpc[aniter]->SetminTPCncls(70);
+          dtc1etaphitpc[aniter]->SetStatus(AliESDtrack::kITSrefit);
+          dtc1etaphitpc[aniter]->SetRemoveKinks(kTRUE);
+          dtc1etaphitpc[aniter]->SetLabel(kFALSE);
+          //    dtc1etaphitpc[aniter]->SetMaxITSChiNdof(6.0);
+          //      dtc1etaphitpc[aniter]->SetMaxTPCChiNdof(6.0);
+          dtc1etaphitpc[aniter]->SetMaxImpactXY(0.2);
+          dtc1etaphitpc[aniter]->SetMaxImpactZ(0.25);
+          //      dtc1etaphitpc[aniter]->SetMaxSigmaToVertex(6.0);
+        }
+        else if (runtype == 2) {
+          dtc1etaphitpc[aniter]->SetStatus(AliESDtrack::kTPCin);
+          dtc1etaphitpc[aniter]->SetminTPCncls(80);
+          dtc1etaphitpc[aniter]->SetRemoveKinks(kTRUE);
+          dtc1etaphitpc[aniter]->SetLabel(kFALSE);
+          dtc1etaphitpc[aniter]->SetMaxTPCChiNdof(4.0);
+          dtc1etaphitpc[aniter]->SetMaxImpactXY(2.4);
+          dtc1etaphitpc[aniter]->SetMaxImpactZ(3.0);
 
-	  }
+          if (ichg == 2) {
+            dtc2etaphitpc[aniter]->SetStatus(AliESDtrack::kTPCin);
+            dtc2etaphitpc[aniter]->SetminTPCncls(80);
+            dtc2etaphitpc[aniter]->SetRemoveKinks(kTRUE);
+            dtc2etaphitpc[aniter]->SetLabel(kFALSE);
+            dtc2etaphitpc[aniter]->SetMaxTPCChiNdof(4.0);
+            dtc2etaphitpc[aniter]->SetMaxImpactXY(0.25);
+            dtc2etaphitpc[aniter]->SetMaxImpactZ(0.15);
+          }
 
-	  cutPass1YPtetaphitpc[aniter] = new AliFemtoCutMonitorParticleYPt(Form("cutPass1%stpcM%i", chrgs[ichg], imult),PionMass);
-	  cutFail1YPtetaphitpc[aniter] = new AliFemtoCutMonitorParticleYPt(Form("cutFail1%stpcM%i", chrgs[ichg], imult),PionMass);
-	  dtc1etaphitpc[aniter]->AddCutMonitor(cutPass1YPtetaphitpc[aniter], cutFail1YPtetaphitpc[aniter]);
+        }
 
-	  cutPass1PIDetaphitpc[aniter] = new AliFemtoCutMonitorParticlePID(Form("cutPass1%stpcM%i", chrgs[ichg], imult),2);//0-pion,1-kaon,2-proton
-	  cutFail1PIDetaphitpc[aniter] = new AliFemtoCutMonitorParticlePID(Form("cutFail1%stpcM%i", chrgs[ichg], imult),2);
-	  dtc1etaphitpc[aniter]->AddCutMonitor(cutPass1PIDetaphitpc[aniter], cutFail1PIDetaphitpc[aniter]);
+        cutPass1YPtetaphitpc[aniter] = new AliFemtoCutMonitorParticleYPt(Form("cutPass1%stpcM%i", chrgs[ichg], imult),PionMass);
+        cutFail1YPtetaphitpc[aniter] = new AliFemtoCutMonitorParticleYPt(Form("cutFail1%stpcM%i", chrgs[ichg], imult),PionMass);
+        dtc1etaphitpc[aniter]->AddCutMonitor(cutPass1YPtetaphitpc[aniter], cutFail1YPtetaphitpc[aniter]);
 
-	  if (ichg == 2){
-	    cutPass2PIDetaphitpc[aniter] = new AliFemtoCutMonitorParticlePID(Form("cutPass2%stpcM%i", chrgs[ichg], imult),2);//0-pion,1-kaon,2-proton
-	    cutFail2PIDetaphitpc[aniter] = new AliFemtoCutMonitorParticlePID(Form("cutFail2%stpcM%i", chrgs[ichg], imult),2);
-	    dtc2etaphitpc[aniter]->AddCutMonitor(cutPass2PIDetaphitpc[aniter], cutFail2PIDetaphitpc[aniter]);
-	  }
+        cutPass1PIDetaphitpc[aniter] = new AliFemtoCutMonitorParticlePID(Form("cutPass1%stpcM%i", chrgs[ichg], imult),2);//0-pion,1-kaon,2-proton
+        cutFail1PIDetaphitpc[aniter] = new AliFemtoCutMonitorParticlePID(Form("cutFail1%stpcM%i", chrgs[ichg], imult),2);
+        dtc1etaphitpc[aniter]->AddCutMonitor(cutPass1PIDetaphitpc[aniter], cutFail1PIDetaphitpc[aniter]);
 
-	  sqpcetaphitpc[aniter] = new AliFemtoPairCutAntiGamma();
+        if (ichg == 2) {
+          cutPass2PIDetaphitpc[aniter] = new AliFemtoCutMonitorParticlePID(Form("cutPass2%stpcM%i", chrgs[ichg], imult),2);//0-pion,1-kaon,2-proton
+          cutFail2PIDetaphitpc[aniter] = new AliFemtoCutMonitorParticlePID(Form("cutFail2%stpcM%i", chrgs[ichg], imult),2);
+          dtc2etaphitpc[aniter]->AddCutMonitor(cutPass2PIDetaphitpc[aniter], cutFail2PIDetaphitpc[aniter]);
+        }
 
-	  if (runtype == 0) {
-	    sqpcetaphitpc[aniter]->SetShareQualityMax(1.0);
-	    sqpcetaphitpc[aniter]->SetShareFractionMax(0.05);
-	    sqpcetaphitpc[aniter]->SetRemoveSameLabel(kFALSE);
-	    // sqpcetaphitpc[aniter]->SetMaxEEMinv(0.0);
-	    // sqpcetaphitpc[aniter]->SetMaxThetaDiff(0.0);
-	    //	    sqpcetaphitpc[aniter]->SetTPCEntranceSepMinimum(1.5);
-	    //sqpcetaphitpc[aniter]->SetRadialDistanceMinimum(0.12, 0.03);
-	    //	    sqpcetaphitpc[aniter]->SetEtaDifferenceMinimum(0.02);
-	  }
-	  else if (runtype == 1) {
-	    sqpcetaphitpc[aniter]->SetShareQualityMax(1.0);
-	    sqpcetaphitpc[aniter]->SetShareFractionMax(1.05);
-	    sqpcetaphitpc[aniter]->SetRemoveSameLabel(kFALSE);
-	    // sqpcetaphitpc[aniter]->SetMaxEEMinv(0.002);
-	    // sqpcetaphitpc[aniter]->SetMaxThetaDiff(0.008);
-	    //	    sqpcetaphitpc[aniter]->SetTPCEntranceSepMinimum(5.0);
-	    //sqpcetaphitpc[aniter]->SetRadialDistanceMinimum(1.2, 0.03);
-	    //	    sqpcetaphitpc[aniter]->SetEtaDifferenceMinimum(0.02);
-	  }
-	  else if (runtype == 2) {
-	    sqpcetaphitpc[aniter]->SetUseAOD(kTRUE);
-	    sqpcetaphitpc[aniter]->SetShareQualityMax(1.0);
-	    sqpcetaphitpc[aniter]->SetShareFractionMax(0.05);
-	    sqpcetaphitpc[aniter]->SetRemoveSameLabel(kFALSE);
+        sqpcetaphitpc[aniter] = new AliFemtoPairCutAntiGamma();
 
-	    if (gammacut == 0) {
-	      sqpcetaphitpc[aniter]->SetMaxEEMinv(0.0);
-	      sqpcetaphitpc[aniter]->SetMaxThetaDiff(0.0);
-	    }
-	    else if (gammacut == 1) {
-	      sqpcetaphitpc[aniter]->SetMaxEEMinv(0.002);
-	      sqpcetaphitpc[aniter]->SetMaxThetaDiff(0.008);
-	    }
+        if (runtype == 0) {
+          sqpcetaphitpc[aniter]->SetShareQualityMax(1.0);
+          sqpcetaphitpc[aniter]->SetShareFractionMax(0.05);
+          sqpcetaphitpc[aniter]->SetRemoveSameLabel(kFALSE);
+          // sqpcetaphitpc[aniter]->SetMaxEEMinv(0.0);
+          // sqpcetaphitpc[aniter]->SetMaxThetaDiff(0.0);
+          //	    sqpcetaphitpc[aniter]->SetTPCEntranceSepMinimum(1.5);
+          //sqpcetaphitpc[aniter]->SetRadialDistanceMinimum(0.12, 0.03);
+          //	    sqpcetaphitpc[aniter]->SetEtaDifferenceMinimum(0.02);
+        }
+        else if (runtype == 1) {
+          sqpcetaphitpc[aniter]->SetShareQualityMax(1.0);
+          sqpcetaphitpc[aniter]->SetShareFractionMax(1.05);
+          sqpcetaphitpc[aniter]->SetRemoveSameLabel(kFALSE);
+          // sqpcetaphitpc[aniter]->SetMaxEEMinv(0.002);
+          // sqpcetaphitpc[aniter]->SetMaxThetaDiff(0.008);
+          //	    sqpcetaphitpc[aniter]->SetTPCEntranceSepMinimum(5.0);
+          //sqpcetaphitpc[aniter]->SetRadialDistanceMinimum(1.2, 0.03);
+          //	    sqpcetaphitpc[aniter]->SetEtaDifferenceMinimum(0.02);
+        }
+        else if (runtype == 2) {
+          sqpcetaphitpc[aniter]->SetUseAOD(kTRUE);
+          sqpcetaphitpc[aniter]->SetShareQualityMax(1.0);
+          sqpcetaphitpc[aniter]->SetShareFractionMax(0.05);
+          sqpcetaphitpc[aniter]->SetRemoveSameLabel(kFALSE);
 
-	    //phi-star cut - values from Johana
-	    // 	    sqpcetaphitpc[aniter]->SetPhiStarDifferenceMinimum(0.012);
-	    // 	    sqpcetaphitpc[aniter]->SetEtaDifferenceMinimum(0.017);
+          if (gammacut == 0) {
+            sqpcetaphitpc[aniter]->SetMaxEEMinv(0.0);
+            sqpcetaphitpc[aniter]->SetMaxThetaDiff(0.0);
+          }
+          else if (gammacut == 1) {
+            sqpcetaphitpc[aniter]->SetMaxEEMinv(0.002);
+            sqpcetaphitpc[aniter]->SetMaxThetaDiff(0.008);
+          }
 
-	  }
+          //phi-star cut - values from Johana
+          // sqpcetaphitpc[aniter]->SetPhiStarDifferenceMinimum(0.012);
+          // sqpcetaphitpc[aniter]->SetEtaDifferenceMinimum(0.017);
 
-	  anetaphitpc[aniter]->SetEventCut(mecetaphitpc[aniter]);
+        }
 
-	  if (ichg == 2) {
-	    anetaphitpc[aniter]->SetFirstParticleCut(dtc1etaphitpc[aniter]);
-	    anetaphitpc[aniter]->SetSecondParticleCut(dtc2etaphitpc[aniter]);
-	  }
-	  else {
-	    anetaphitpc[aniter]->SetFirstParticleCut(dtc1etaphitpc[aniter]);
-	    anetaphitpc[aniter]->SetSecondParticleCut(dtc1etaphitpc[aniter]);
-	  }
+        anetaphitpc[aniter]->SetEventCut(mecetaphitpc[aniter]);
 
-	  anetaphitpc[aniter]->SetPairCut(sqpcetaphitpc[aniter]);
+        if (ichg == 2) {
+          anetaphitpc[aniter]->SetFirstParticleCut(dtc1etaphitpc[aniter]);
+          anetaphitpc[aniter]->SetSecondParticleCut(dtc2etaphitpc[aniter]);
+        }
+        else {
+          anetaphitpc[aniter]->SetFirstParticleCut(dtc1etaphitpc[aniter]);
+          anetaphitpc[aniter]->SetSecondParticleCut(dtc1etaphitpc[aniter]);
+        }
 
-	  if (ichg == 2) {
-	    ckstartpc[aniter] = new AliFemtoCorrFctnNonIdDR(Form("ckstar%stpcM%i", chrgs[ichg], imult),nbinssh,0.0,shqmax);
-	    anetaphitpc[aniter]->AddCorrFctn(ckstartpc[aniter]);
-	  }
-	  else {
-	    cqinvtpc[aniter] = new AliFemtoQinvCorrFctn(Form("cqinv%stpcM%i", chrgs[ichg], imult),nbinssh,0.0,shqmax);
-	    anetaphitpc[aniter]->AddCorrFctn(cqinvtpc[aniter]);
-	  }
+        anetaphitpc[aniter]->SetPairCut(sqpcetaphitpc[aniter]);
 
-    cylmkttpc[aniter] = new AliFemtoCorrFctnDirectYlm(Form("cylm%stpcM%i", chrgs[ichg], imult),3,nbinssh, 0.0,shqmax,runshlcms);
-          anetaphitpc[aniter]->AddCorrFctn(cylmkttpc[aniter]);
+        if (ichg == 2) {
+          ckstartpc[aniter] = new AliFemtoCorrFctnNonIdDR(
+            Form("ckstar%stpcM%i", chrgs[ichg], imult), nbinssh, 0.0, shqmax
+          );
+          anetaphitpc[aniter]->AddCorrFctn(ckstartpc[aniter]);
+        }
+        else {
+          cqinvtpc[aniter] = new AliFemtoQinvCorrFctn(
+            Form("cqinv%stpcM%i", chrgs[ichg], imult), nbinssh, 0.0, shqmax
+          );
+          anetaphitpc[aniter]->AddCorrFctn(cqinvtpc[aniter]);
+        }
 
-	  if (runktdep) {
-	    int ktm;
-	    for (int ikt=0; ikt<numOfkTbins; ikt++) {
+        cylmkttpc[aniter] = new AliFemtoCorrFctnDirectYlm(
+          Form("cylm%stpcM%i", chrgs[ichg], imult), 3, nbinssh, 0.0, shqmax, runshlcms
+        );
+        anetaphitpc[aniter]->AddCorrFctn(cylmkttpc[aniter]);
 
-	      ktm = aniter * numOfkTbins + ikt;
-	      ktpcuts[ktm] = new AliFemtoKTPairCut(ktrng[ikt], ktrng[ikt+1]);
+        if (runktdep) {
+          int ktm;
+          for (int ikt = 0; ikt < numOfkTbins; ikt++) {
 
-	      cylmkttpc[ktm] = new AliFemtoCorrFctnDirectYlm(Form("cylm%stpcM%ikT%i", chrgs[ichg], imult, ikt),3,nbinssh,0.0,shqmax,0);
-	      cylmkttpc[ktm]->SetPairSelectionCut(ktpcuts[ktm]);
-	      anetaphitpc[aniter]->AddCorrFctn(cylmkttpc[ktm]);
+            ktm = aniter * numOfkTbins + ikt;
+            ktpcuts[ktm] = new AliFemtoKTPairCut(ktrng[ikt], ktrng[ikt+1]);
 
-	      cqinvkttpc[ktm] = new AliFemtoQinvCorrFctn(Form("cqinv%stpcM%ikT%i", chrgs[ichg], imult, ikt),nbinssh,0.0,(imult>6)?shqmax*2.5:shqmax);
-	      cqinvkttpc[ktm]->SetPairSelectionCut(ktpcuts[ktm]);
-	      anetaphitpc[aniter]->AddCorrFctn(cqinvkttpc[ktm]);
+            cylmkttpc[ktm] = new AliFemtoCorrFctnDirectYlm(Form("cylm%stpcM%ikT%i", chrgs[ichg], imult, ikt),3,nbinssh,0.0,shqmax,0);
+            cylmkttpc[ktm]->SetPairSelectionCut(ktpcuts[ktm]);
+            anetaphitpc[aniter]->AddCorrFctn(cylmkttpc[ktm]);
 
-	      // 	      cqinvsqtpc[ktm] = new AliFemtoShareQualityCorrFctn(Form("cqinvsq%stpcM%ikT%i", chrgs[ichg], imult, ikt),nbinssh,0.0,shqmax);
-	      // 	      cqinvsqtpc[ktm]->SetPairSelectionCut(ktpcuts[ktm]);
-	      // 	      anetaphitpc[aniter]->AddCorrFctn(cqinvsqtpc[ktm]);
+            cqinvkttpc[ktm] = new AliFemtoQinvCorrFctn(Form("cqinv%stpcM%ikT%i", chrgs[ichg], imult, ikt),nbinssh,0.0,(imult>6)?shqmax*2.5:shqmax);
+            cqinvkttpc[ktm]->SetPairSelectionCut(ktpcuts[ktm]);
+            anetaphitpc[aniter]->AddCorrFctn(cqinvkttpc[ktm]);
 
-	      // 	      cqinvinnertpc[ktm] = new AliFemtoTPCInnerCorrFctn(Form("cqinvinner%stpcM%ikT%i", chrgs[ichg], imult, ikt),nbinssh,0.0,shqmax);
-	      // 	      cqinvinnertpc[ktm]->SetPairSelectionCut(ktpcuts[ktm]);
-	      // 	      cqinvinnertpc[ktm]->SetRadius(1.2);
-	      // 	      anetaphitpc[aniter]->AddCorrFctn(cqinvinnertpc[ktm]);
+            // 	      cqinvsqtpc[ktm] = new AliFemtoShareQualityCorrFctn(Form("cqinvsq%stpcM%ikT%i", chrgs[ichg], imult, ikt),nbinssh,0.0,shqmax);
+            // 	      cqinvsqtpc[ktm]->SetPairSelectionCut(ktpcuts[ktm]);
+            // 	      anetaphitpc[aniter]->AddCorrFctn(cqinvsqtpc[ktm]);
 
-	      // 	      if (run3d) {
-	      // 		cq3dlcmskttpc[ktm] = new AliFemtoCorrFctn3DLCMSSym(Form("cq3d%stpcM%ikT%i", chrgs[ichg], imult, ikt),60,(imult>3)?((imult>6)?((imult>7)?0.6:0.4):0.25):0.15);
-	      // 		cq3dlcmskttpc[ktm]->SetPairSelectionCut(ktpcuts[ktm]);
-	      // 		anetaphitpc[aniter]->AddCorrFctn(cq3dlcmskttpc[ktm]);
-	      // 	      }
-	    }
-	  }
+            // 	      cqinvinnertpc[ktm] = new AliFemtoTPCInnerCorrFctn(Form("cqinvinner%stpcM%ikT%i", chrgs[ichg], imult, ikt),nbinssh,0.0,shqmax);
+            // 	      cqinvinnertpc[ktm]->SetPairSelectionCut(ktpcuts[ktm]);
+            // 	      cqinvinnertpc[ktm]->SetRadius(1.2);
+            // 	      anetaphitpc[aniter]->AddCorrFctn(cqinvinnertpc[ktm]);
 
-	 // cdedpetaphi[aniter] = new AliFemtoCorrFctnDEtaDPhi(Form("cdedp%stpcM%i", chrgs[ichg], imult),24, 24);
-	 // anetaphitpc[aniter]->AddCorrFctn(cdedpetaphi[aniter]);
+            // 	      if (run3d) {
+            // 		cq3dlcmskttpc[ktm] = new AliFemtoCorrFctn3DLCMSSym(Form("cq3d%stpcM%ikT%i", chrgs[ichg], imult, ikt),60,(imult>3)?((imult>6)?((imult>7)?0.6:0.4):0.25):0.15);
+            // 		cq3dlcmskttpc[ktm]->SetPairSelectionCut(ktpcuts[ktm]);
+            // 		anetaphitpc[aniter]->AddCorrFctn(cq3dlcmskttpc[ktm]);
+            // 	      }
+          }
+        }
 
-	  Manager->AddAnalysis(anetaphitpc[aniter]);
-	}
+        // cdedpetaphi[aniter] = new AliFemtoCorrFctnDEtaDPhi(Form("cdedp%stpcM%i", chrgs[ichg], imult),24, 24);
+        // anetaphitpc[aniter]->AddCorrFctn(cdedpetaphi[aniter]);
+
+        Manager->AddAnalysis(anetaphitpc[aniter]);
       }
     }
   }
