@@ -10,11 +10,10 @@ bool is_mc_analysis = false;
 
 
 TString grid_output_dir = "output";
-TString grid_working_dir = "PiPi_v02";
+TString grid_working_dir = "work_pipi/2015-12-17";
 
-//TString runmode = "full";
-TString runmode = "terminate";
-TString run_xml_file;
+TString runmode = "full";
+//TString runmode = "terminate";
 
 
 #define DEV_LOCAL
@@ -51,8 +50,13 @@ void process_arguments();
 std::set<int> runs;
 std::vector<int>* gBitmap;
 
-TString output_filename = "PiPi_Analysis_Results.root";
+TString macro_config = "";
 
+TString output_filename = "PiPi_Analysis_Results.root";
+TString xml_filename =
+//  "";
+  "/alice/cern.ch/user/a/akubera/xml/"
+  "m00";
 
 int use_runs[] = {170163, 0};
 //int use_runs[] = {170593, 170572, 170388, 170387, 0};
@@ -65,7 +69,7 @@ void
 RunGrid()
 {
   cout << "[RunMe] Begin\n";
-
+  cout << "        XML : " << xml_filename << "\n";
   bool is_mc_analysis = kFALSE;
 
   AliAnalysisManager *mgr = new AliAnalysisManager("mgr", "PiPi Manager");
@@ -79,23 +83,31 @@ RunGrid()
   alienHandler->SetOverwriteMode();
   alienHandler->SetRunMode(runmode);
   alienHandler->SetAPIVersion("V1.1x");
-  alienHandler->SetAliPhysicsVersion("vAN-20151203-1");
+  alienHandler->SetAliPhysicsVersion("vAN-20151217-1");
   alienHandler->SetRunPrefix("000");
   alienHandler->SetDropToShell(kFALSE);
 
   alienHandler->AddIncludePath("$ALICE_PHYSICS/include");
 
-  // No XML file or runs specified
-  int i = 0;
-  while (use_runs[i]) {
-    runs.insert(use_runs[i++]);
-  }
+  if (xml_filename) {
+    cout << "Adding data file: " << xml_filename << "\n";
+    alienHandler->AddDataFile(xml_filename);
+    alienHandler->SetNrunsPerMaster(30);
 
-  if (runs.size()) {
-    for (std::set<int>::iterator it = runs.begin(); it != runs.end(); ++it) {
-      alienHandler->AddRunNumber(*it);
+  } else {
+
+    // No XML file or runs specified
+    int i = 0;
+    while (use_runs[i]) {
+      runs.insert(use_runs[i++]);
     }
-    alienHandler->SetNrunsPerMaster((int)runs.size());
+
+    if (runs.size()) {
+      for (std::set<int>::iterator it = runs.begin(); it != runs.end(); ++it) {
+        alienHandler->AddRunNumber(*it);
+      }
+      alienHandler->SetNrunsPerMaster((int)runs.size());
+    }
   }
 
   alienHandler->SetGridDataDir("/alice/data/2011/LHC11h_2");
@@ -128,7 +140,7 @@ RunGrid()
   AliAnalysisTaskFemto *pipitask = new AliAnalysisTaskFemto(
     "PiPiTask",
     "$ALICE_PHYSICS/PWGCF/FEMTOSCOPY/macros/Train/PionPionFemto/ConfigFemtoAnalysis.C",
-    "\"@num_events_to_mix = 5;\"",
+    "\"" + macro_config + "\"",
     kFALSE
   );
 
