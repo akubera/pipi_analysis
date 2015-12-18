@@ -110,19 +110,19 @@ for analysis in femtolist:
             yield xcenter(x), ycenter(y), zcenter(z)
 
 
-    TIMESTART = time.monotonic()
     def filter_between(*r):
         return lambda v: r[0] <= v <= r[1]
 
     print("loading", analysis_name, end=' ', flush=True)
 
+    TIMESTART = time.monotonic()
     bg = partial(bin_range,
                  ratio,
                 #  x_filt=filter_between(*map(ratio.GetXaxis().FindBin, (-0.2, 0.2))),
                 #  y_filt=filter_between(*map(ratio.GetYaxis().FindBin, (-0.2, 0.2))),
                 #  z_filt=filter_between(*map(ratio.GetZaxis().FindBin, (-0.2, 0.2))),
                  )
-    X = np.array([x for x in bin_centers(ratio, bg)]).T
+    X = np.array([i for i in bin_centers(ratio, bg)]).T
     Y = np.array(list(apply(ratio.GetBinContent, bg())))
     E = np.array(list(apply(ratio.GetBinError, bg())))
     TIMESTOP = time.monotonic()
@@ -153,7 +153,7 @@ for analysis in femtolist:
         r_side = params['r_side'].value
 
         p = np.array([r_out, r_side, r_long]) / 0.197
-        # print("SHAPE", np.shape(x))
+
         if np.shape(x)[1] == 3:
             t = (p * x) ** 2
         else:
@@ -168,7 +168,7 @@ for analysis in femtolist:
         data, err = y[0], y[1]
 
         res = np.sqrt((model - data) ** 2 / err ** 2)
-        # print("<<", p, np.shape(res), res)
+
         return res
 
 
@@ -216,6 +216,41 @@ for analysis in femtolist:
     # cqout_g = ROOT.TCanvas("cqout graph")
     qo_graph.SetLineColor(2)
     qo_graph.Draw("same")
+
+
+
+
+    qs_binrange = BinRange(ratio,
+                           x_bin_range=(xmin, xmax + 1),
+                           z_bin_range=(zmin, zmax + 1),
+                           filter_zero_bins=False)
+    qs_bins = defaultdict(list)
+    for r in qs_binrange:
+        qs_bins[r[0]].append(r)
+
+    qs_domain = np.array(list(tuple(bin_centers(ratio, lambda: qs_x_bins))
+                              for qs_x_bins in qs_bins.values()))
+    # for i in qo_domain:
+    #     print(i)
+    qs_y = np.array(list(model_3d(fit_res.params, x) for x in qo_domain))
+    # print("qo_y:", qo_y)
+
+    qside_canvas = ROOT.TCanvas("qside_canvas")
+    qside = ratio.ProjectionY("qside", xmin, xmax, zmin, zmax)
+    qs_X = np.array(list(qside.GetBinCenter(i) for i in range(qside.GetXaxis().GetNbins())))
+    qs_Y = np.sum(qs_y, axis=1)
+
+    qs_graph = ROOT.TGraph(len(qs_X), qs_X, qs_Y)
+    qside.Draw()
+
+    qs_graph.SetLineColor(2)
+    qs_graph.Draw("same")
+
+
+
+
+
+
 
     # coutside = ROOT.TCanvas("out_side")
     # ratio.GetZaxis().SetRangeUser(-0.05, 0.05)
