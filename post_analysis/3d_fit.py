@@ -253,12 +253,13 @@ for analysis in femtolist:
 
     qinv_fit = minimize(fit_qinv, qinv_params, args=(x_vals, (y_vals, e_vals)))
     report_fit(qinv_fit)
-    FIT_Y = fit_qinv(qinv_fit.params, X)
+    FIT_X = np.linspace(300, (X[0], X[-1]))
+    FIT_Y = fit_qinv(qinv_fit.params, FIT_X)
 
     canvas_qinv = gen_canvas()
     # canvas_qinv.cd(1)
 
-    fit_plot = TGraph(len(X), X, FIT_Y)
+    fit_plot = TGraph(len(FIT_X), FIT_X, FIT_Y)
     CACHE.append(fit_plot)
 
     ratio.Draw()

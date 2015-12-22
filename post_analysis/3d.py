@@ -183,31 +183,36 @@ for analysis in femtolist:
     zzero = ratio.GetZaxis().FindBin(0.0)
 
     bin_sep = 1
-    xmin, xmax = xzero - bin_sep, xzero + bin_sep
-    ymin, ymax = yzero - bin_sep, yzero + bin_sep
-    zmin, zmax = zzero - bin_sep, zzero + bin_sep
+    xmin, xmax = xzero - bin_sep, xzero + bin_sep + 1
+    ymin, ymax = yzero - bin_sep, yzero + bin_sep + 1
+    zmin, zmax = zzero - bin_sep, zzero + bin_sep + 1
 
-    print(zmin, zmax)
+    xspace = np.linspace(-0.6, 0.6, 400)
+    yspace = tuple(map(ratio.GetYaxis().GetBinCenter, range(ymin, ymax+1)))
+    zspace = tuple(map(ratio.GetZaxis().GetBinCenter, range(zmin, zmax+1)))
 
     qo_binrange = BinRange(ratio,
-                           y_bin_range=(ymin, ymax + 1),
-                           z_bin_range=(zmin, zmax + 1),
+                           y_bin_range=(ymin, ymax),
+                           z_bin_range=(zmin, zmax),
                            filter_zero_bins=False)
     qo_bins = defaultdict(list)
     for r in qo_binrange:
         qo_bins[r[0]].append(r)
 
-    qo_domain = np.array(list(tuple(bin_centers(ratio, lambda: qo_x_bins))
-                              for qo_x_bins in qo_bins.values()))
-    print('qo_domain shape', np.shape(qo_domain))
-    # for i in qo_domain:
-    #     print(i)
+    # qo_domain = np.array(list(tuple(bin_centers(ratio, lambda: qo_x_bins))
+    #                           for qo_x_bins in qo_bins.values()))
+
+    qo_domain = np.array(list(list([x, y, z]
+                              for y in yspace
+                              for z in zspace)
+                              for x in xspace
+                            ))
     qo_y = np.array(list(model_3d(fit_res.params, x) for x in qo_domain))
-    # print("qo_y:", qo_y)
 
     # cqout = ROOT.TCanvas("cqout")
     qout = ratio.ProjectionX("qout", ymin, ymax, zmin, zmax)
-    qo_X = np.array(list(qout.GetBinCenter(i) for i in range(qout.GetXaxis().GetNbins())))
+    # qo_X = np.array(list(qout.GetBinCenter(i) for i in range(qout.GetXaxis().GetNbins())))
+    qo_X = xspace
     qo_Y = np.sum(qo_y, axis=1)
 
     qo_graph = ROOT.TGraph(len(qo_X), qo_X, qo_Y)
@@ -217,12 +222,12 @@ for analysis in femtolist:
     qo_graph.SetLineColor(2)
     qo_graph.Draw("same")
 
-
+    input()
 
 
     qs_binrange = BinRange(ratio,
-                           x_bin_range=(xmin, xmax + 1),
-                           z_bin_range=(zmin, zmax + 1),
+                           x_bin_range=(xmin, xmax),
+                           z_bin_range=(zmin, zmax),
                            filter_zero_bins=False)
     qs_bins = defaultdict(list)
     for r in qs_binrange:
@@ -245,6 +250,51 @@ for analysis in femtolist:
 
     qs_graph.SetLineColor(2)
     qs_graph.Draw("same")
+
+
+
+
+    # def get_projected_axis(name, func, slice1, slice2, axis):
+    #     q = func(name, *slice1, *slice2)
+    #     qx = np.array(list(q.GetBinCenter(i) for i in range(axis.GetNbins())))
+    #     qsx = np.array(list(map(qside.GetBinCenter, range(axis.GetNbins()))))
+    #
+    # y_proj = ratio.ProjectionY("qside", xmin, xmax, zmin, zmax)
+    # qside = get_projected_axis("qside")
+
+
+
+
+
+
+
+
+
+    ql_binrange = BinRange(ratio,
+                           x_bin_range=(xmin, xmax),
+                           z_bin_range=(zmin, zmax),
+                           filter_zero_bins=False)
+    ql_bins = defaultdict(list)
+    for r in ql_binrange:
+        ql_bins[r[0]].append(r)
+
+    ql_domain = np.array(list(tuple(bin_centers(ratio, lambda: ql_x_bins))
+                              for ql_x_bins in ql_bins.values()))
+    # for i in qo_domain:
+    #     print(i)
+    ql_y = np.array(list(model_3d(fit_res.params, x) for x in qo_domain))
+    # print("qo_y:", qo_y)
+
+    qlong_canvas = ROOT.TCanvas("qlong_canvas")
+    qlong = ratio.ProjectionZ("qlong", xmin, xmax, ymin, ymax)
+    ql_X = np.array(list(qlong.GetBinCenter(i) for i in range(qlong.GetXaxis().GetNbins())))
+    ql_Y = np.sum(ql_y, axis=1)
+
+    ql_graph = ROOT.TGraph(len(ql_X), ql_X, ql_Y)
+    qlong.Draw()
+
+    ql_graph.SetLineColor(2)
+    ql_graph.Draw("same")
 
 
 
