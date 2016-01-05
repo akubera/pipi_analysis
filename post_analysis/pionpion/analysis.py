@@ -3,7 +3,11 @@
 #
 
 from .root_helpers import get_root_object
-from ROOT import TObjArray
+from collections import defaultdict
+from ROOT import (
+    TObjArray,
+    TObjString,
+)
 
 
 class Analysis:
@@ -35,12 +39,12 @@ class Analysis:
         analysis_meta = tree()
 
         analysis_meta
-        for s in str(settings).strip("\n").split("\n"):
-                k, v = s.split('=')
-                keys = k.split('.')
-                k = analysis_meta
-                for key in keys[:-1]:
-                    k = k[key]
-                k[keys[-1]] = v
-                # for key in k.split('.'):
+        for s in str(settings).split("\n")[1:-1]:
+            k, v = s.split('=')
+            keys = k.split('.')
+            k = analysis_meta
+            for key in keys[:-1]:
+                k = k[key]
+            k[keys[-1]] = v
+            # for key in k.split('.'):
         return analysis_meta
