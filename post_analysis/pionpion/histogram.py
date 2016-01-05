@@ -72,6 +72,53 @@ class Histogram:
         print("[value_in]", (i,j,k))
         return self.data[i, j, k]
 
+    def project_1d(self, axis_idx, *axis_ranges, bounds=(None, None)):
+        """
+        Project multi-dimensional data into one dimention along axis with
+        index 'axis_idx'. The variable 'axis_ranges' parameter limits the
+        range of all other axes, with the position of each axis_range
+        corresponding to each axis NOT the axis being projected into.
+        For example:
+
+            # projects onto x-axis, y is limited between (1.0, 2.0), z (-1.0, 1.0)
+            hist.project_1d(0, (1.0, 2.0), (-1.0, 1.0))
+
+            # projects onto y-axis, x is limited between (1.0, 2.0), z (-1.0, 1.0)
+            hist.project_1d(1, (1.0, 2.0), (-1.0, 1.0))
+
+        The optional 'bounds' variable is the limit of the projected axis; this
+        defaults to no-limit
+        """
+        axes = [a for a in self._axes]
+        try:
+            pojection_axis = axes.pop(axis_idx)
+        except (IndexError, TypeError):
+            raise ValueError("histogram has no axis '{}'".format(axis))
+
+        ranges = list(a.getslice(r) for r, a in zip(axis_ranges, axes))
+        while len(ranges) != len(self._axes) - 1:
+            ranges.append(slice(None))
+
+        projection_slice = pojection_axis.getslice(bounds)
+        ranges.insert(axis_idx, projection_slice)
+
+        projection_data = self.data[ranges]
+        sum_axis = -1
+        summed_axes = []
+
+        for i, r in enumerate(ranges):
+            # if not a slice, this range will not produce an extra dimension
+            # in results (nothing to sum over) - skip
+            if not isinstance(r, slice): continue
+            # this range adds an axis to sum over in projection
+            sum_axis += 1
+            # if this range is the result do not sum over it
+            if i == axis_idx: continue
+            # add the axis to the list of axes to sum over
+            summed_axes.append(sum_axis)
+
+        return projection_data.sum(axis=tuple(iter(summed_axes)))
+
 
     class Axis:
         """
@@ -124,8 +171,19 @@ class Histogram:
                 return self._ptr.FindBin(value)
             if isinstance(value, slice):
                 return slice(*map(self.getbin, (value.start, value.stop)))
+            if isinstance(value, (tuple, list)):
+                start, stop = map(self.getbin, value)
+                if isinstance(stop, int):
+                    stop += 1
+                return slice(start, stop)
 
             return value
+
+        def getslice(self, value):
+            """
+            Alias of getbin
+            """
+            return self.getbin(value)
 
         def bin_generator(self, values):
             print(l)
