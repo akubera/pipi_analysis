@@ -10,21 +10,15 @@ import root_numpy
 import numpy as np
 import numpy.ma as ma
 from itertools import starmap
+from .histogram import Histogram
 
-
-class Q3D:
+class Q3D(Histogram):
     """
     Class wrapping a Q_{out,side,long} histogram for easy access
     """
 
     def __init__(self, hist):
-        self._hist = hist
-        self._data = root_numpy.hist2array(hist)
-        self._axes = (hist.GetXaxis(), hist.GetYaxis(), hist.GetZaxis())
-        self._axis_data = np.array(list(
-            list(axis.GetBinCenter(i) for i in range(1, axis.GetNbins() + 1))
-            for axis in self._axes
-        ))
+        super().__init__(hist)
 
     def bins_to_slices(self,
                        x_domain=(None, None),
@@ -98,9 +92,7 @@ class Q3D:
         """
         data = self._data[x_slice, y_slice, z_slice]
 
-        if (x_slice)
-
-        sum = data.sum(axis=(1,2))
+        sum = data.sum(axis=(1, 2))
 
         q = np.abs(self._axis_data[1]) < 0.034
         print(q)
@@ -108,7 +100,7 @@ class Q3D:
         data = self._data[x_slice, y_slice, z_slice]
         # print("Sliced data", data.shape)
         # print(data)
-        sum = data.sum(axis=(1,2))
+        sum = data.sum(axis=(1, 2))
         # print("Sum: ", sum.shape)
         # print(sum)
         return sum
