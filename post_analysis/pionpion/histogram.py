@@ -38,6 +38,7 @@ class Histogram:
             [axis.GetBinCenter(i) for i in range(1, axis.GetNbins() + 1)]
             for axis in self._axes
         ))
+        self.mask = Histogram.Mask(self)
 
     @property
     def shape(self):
@@ -131,3 +132,13 @@ class Histogram:
 
         def domain(self, space):
             return np.array(map(self._ptr.GetBinCenter, space))
+
+
+    class Mask:
+        """
+        A class wrapping a numpy array-mask used for keeping same shape between
+        data and error arrays
+        """
+
+        def __init__(self, hist):
+            self.hist = hist
