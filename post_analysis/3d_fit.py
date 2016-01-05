@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# post_analysis/fit.py
+# post_analysis/3d_fit.py
 #
 
 import sys
@@ -10,6 +10,13 @@ from collections import defaultdict
 import types
 import numbers
 import ctypes
+import time
+from pionpion.analysis import Analysis
+
+
+TSTART = time.monotonic()
+print("loading ROOT... ", end='', flush=True, file=sys.stderr)
+from lmfit import minimize, Parameters, report_fit
 import ROOT
 from ROOT import (
     TFile,
@@ -18,7 +25,10 @@ from ROOT import (
     TObjString,
     TGraph,
 )
-from lmfit import minimize, Parameters, report_fit
+import root_numpy
+from pionpion.histogram import Histogram
+
+print("Done (%fs)" % (time.monotonic() - TSTART), file=sys.stderr)
 
 CACHE = []
 STORED_CANVASES = []
@@ -115,28 +125,12 @@ for analysis in femtolist:
     output.mkdir(analysis_name)
     output.cd(analysis_name)
 
-    settings = analysis.Last()
-    if not isinstance(settings, TObjString):
-        print("Analysis '%s' is missing metadata. Skipping")
-        continue
-
-    def tree(): return defaultdict(tree)
-    analysis_meta = tree()
-
     print("********* %s **********" % analysis_name)
 
-    # get settings
-    for s in str(settings).split("\n")[1:-1]:
-        k, v = s.split('=')
-        keys = k.split('.')
-        k = analysis_meta
-        for key in keys[:-1]:
-            k = k[key]
-        k[keys[-1]] = v
-        # for key in k.split('.'):
-
-    # from pprint import pprint
-    # pprint(analysis_meta)
+    analysis_meta = Analysis.load_metadata(analysis.Last())
+    if analysis_meta is None:
+        print("Analysis '%s' is missing metadata. Skipping")
+        continue
 
     track_meta = analysis_meta['AliFemtoSimpleAnalysis']['AliFemtoESDTrackCut']
     print(" Charge:", track_meta['charge'])
@@ -176,7 +170,52 @@ for analysis in femtolist:
         print("No 3D histogram found in", analysis_name)
         continue
 
-    num_qout = q3d_num.ProjectionX("num_qout")
+    from pionpion.q3d import Q3D
+
+    num_hist_3d = Q3D(q3d_num)
+    den_hist_3d = Q3D(q3d_den)
+
+
+    print('   ', num_hist_3d[-.1:.1, -.1:.1, 0.0])
+    # l = num_hist_3d.bin_at(slice(None), 0.1, 0.2)
+    # print('   ', num_hist_3d.value_at(0.1, 0.1, 0.2))
+    # print('   ', num_hist_3d.value_in(*l))
+    # # print("   ", we[0.0, -0.1:0.5, 0.0])
+    # bins = tuple(axis.FindBin(0.0) for axis in we._axes)
+    # print("   ", bins)
+    # print("   ", we._ptr.GetBinContent(*bins))
+    # print("   ", we.error[10, 10, 10])
+    # print("  >", we._ptr.GetBinError(10, 10, 10))
+
+    y_dom = (-0.01, 0.01)
+    z_dom = (-0.00, 0.00)
+    q_out_num = num_hist_3d.projection_out(y_domain=y_dom, z_domain=z_dom)
+    q_out_num_new = num_hist_3d.project_1d(0, y_dom, z_dom)
+    print(np.shape(q_out_num))
+    print(np.shape(q_out_num_new))
+    # print(q_out_num)
+    # print(q_out_num_new)
+    print(all(q_out_num_new == q_out_num))
+    out_pro_bin_list = [
+        q3d_num.GetYaxis().FindBin(y_dom[0]),
+        q3d_num.GetYaxis().FindBin(y_dom[1]),
+        q3d_num.GetZaxis().FindBin(z_dom[0]),
+        q3d_num.GetZaxis().FindBin(z_dom[1]),
+    ]
+    print("projection X bins:", out_pro_bin_list)
+    num_qout = q3d_num.ProjectionX("num_qout", *out_pro_bin_list)
+    num_qout_a = root_numpy.hist2array(num_qout, include_overflow=True)
+    print("==>")
+    print("", q_out_num[:8])
+    print("", q_out_num_new[:8])
+    print("", num_qout_a[:8])
+    diff = num_qout_a - q_out_num_new
+
+    print("", diff[:10])
+    print("", num_qout_a == q_out_num_new)
+    break
+
+
     den_qout = q3d_den.ProjectionX("den_qout")
 
     ratio_qo = get_ratio('ratio_qo', num_qout, den_qout, [(-0.4, -0.7), (0.4, 0.7)])
