@@ -12,6 +12,7 @@ import numpy.ma as ma
 from itertools import starmap
 from .histogram import Histogram
 
+
 class Q3D(Histogram):
     """
     Class wrapping a Q_{out,side,long} histogram for easy access
@@ -64,7 +65,7 @@ class Q3D(Histogram):
             z_domain=z_domain
         )
 
-        data = self._data[x_slice, y_slice, z_slice]
+        data = self.data[x_slice, y_slice, z_slice]
         # print("Sliced data", data.shape)
         # print(data)
         sum = data.sum(axis=(1, 2))
@@ -82,7 +83,7 @@ class Q3D(Histogram):
             z_domain=z_domain
         )
 
-        data = self._data[x_slice, y_slice, z_slice]
+        data = self.data[x_slice, y_slice, z_slice]
         sum = data.sum(axis=(0, 2))
         return sum
 
@@ -90,14 +91,14 @@ class Q3D(Histogram):
         """
         Returns a numpy array
         """
-        data = self._data[x_slice, y_slice, z_slice]
+        data = self.data[x_slice, y_slice, z_slice]
 
         sum = data.sum(axis=(1, 2))
 
         q = np.abs(self._axis_data[1]) < 0.034
         print(q)
-        print(self._data[:,q,:])
-        data = self._data[x_slice, y_slice, z_slice]
+        print(self.data[:, q, :])
+        data = self.data[x_slice, y_slice, z_slice]
         # print("Sliced data", data.shape)
         # print(data)
         sum = data.sum(axis=(1, 2))
