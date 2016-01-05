@@ -42,11 +42,12 @@ void process_arguments();
 std::set<int> runs;
 std::vector<int>* gBitmap;
 
-TString output_filename = "MultiResults_04_vec.root",
+TString output_filename = "MultiResults_11.root",
          macro_filename = "$ALICE_PHYSICS/PWGCF/FEMTOSCOPY/macros/Train/PionPionFemto/ConfigFemtoAnalysis.C";
 
 // const TString config = "\"@vertex_bins = 5;{0:5, 0:10:20:30}; +p; +m; ~do_kt_qinv = true;\"";
-const TString config = "\"\"";
+// const TString config = "\"\"";
+TString config = "\"$pion_1_max_impact_z = 0.5; $pion_1_max_impact_xy = 0.4; $pion_1_max_tpc_chi_ndof = 0.024; $pion_1_max_its_chi_ndof = 0.025;\"";
 
 int use_runs[] = {170163, 0};
 //int use_runs[] = {170593, 170572, 170388, 170387, 0};
@@ -59,6 +60,9 @@ void
 RunMe()
 {
   cout << "[RunMe] Begin\n";
+
+  TStopwatch timer;
+  timer.Start();
 
   // Setup includes
   gInterpreter->AddIncludePath("$ALICE_ROOT/include");
@@ -129,6 +133,9 @@ RunMe()
   TChain *input_files = load_files(new TChain("aodTree"));
 
   mgr->StartAnalysis("local", input_files);
+
+  timer.Stop();
+  timer.Print();
 }
 
 
@@ -179,10 +186,10 @@ load_files(TChain *input_files = NULL)
       // input_files->Add("/alice/data/2011/LHC11h_2/000170593/ESDs/pass2/AOD/0001/AliAOD.root");
 //      input_files->Add("/alice/data/2011/LHC11h_2/000169506/ESDs/pass2/AOD145/0001/AliAOD.root");
 //      input_files->Add("/alice/data/2011/LHC11h_2/000169506/ESDs/pass2/AOD145/0002/AliAOD.root");
-       input_files->Add("/alice/data/2011/LHC11h_2/000169506/ESDs/pass2/AOD145/0003/AliAOD.root");
+//       input_files->Add("/alice/data/2011/LHC11h_2/000169506/ESDs/pass2/AOD145/0003/AliAOD.root");
 //       input_files->Add("/alice/data/2011/LHC11h_2/000169506/ESDs/pass2/AOD145/0004/AliAOD.root");
 //       input_files->Add("/alice/data/2011/LHC11h_2/000169506/ESDs/pass2/AOD145/0005/AliAOD.root");
-//       input_files->Add("/alice/data/2011/LHC11h_2/000169506/ESDs/pass2/AOD145/0026/AliAOD.root");
+       input_files->Add("/alice/data/2011/LHC11h_2/000169506/ESDs/pass2/AOD145/0026/AliAOD.root");
       // input_files->Add("/alice/data/2011/LHC11h_2/000169506/ESDs/pass2/AOD145/0034/AliAOD.root");
       // input_files->Add("/alice/data/2011/LHC11h_2/000169506/ESDs/pass2/AOD145/1226/AliAOD.root");
       //

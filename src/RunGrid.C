@@ -10,10 +10,11 @@ bool is_mc_analysis = false;
 
 
 TString grid_output_dir = "output";
-TString grid_working_dir = "work_pipi/2015-12-17";
+TString grid_working_dir = "work_pipi/2015-12-24.01";
 
-TString runmode = "full";
-//TString runmode = "terminate";
+TString runmode =
+  // "full";
+   "terminate";
 
 
 #define DEV_LOCAL
@@ -50,7 +51,7 @@ void process_arguments();
 std::set<int> runs;
 std::vector<int>* gBitmap;
 
-TString macro_config = "";
+TString macro_config = "$pion_1_max_impact_z = 0.5; $pion_1_max_impact_xy = 0.025";
 
 TString output_filename = "PiPi_Analysis_Results.root";
 TString xml_filename =
@@ -83,7 +84,7 @@ RunGrid()
   alienHandler->SetOverwriteMode();
   alienHandler->SetRunMode(runmode);
   alienHandler->SetAPIVersion("V1.1x");
-  alienHandler->SetAliPhysicsVersion("vAN-20151217-1");
+  alienHandler->SetAliPhysicsVersion("vAN-20151224-1");
   alienHandler->SetRunPrefix("000");
   alienHandler->SetDropToShell(kFALSE);
 
@@ -109,6 +110,9 @@ RunGrid()
       alienHandler->SetNrunsPerMaster((int)runs.size());
     }
   }
+
+//  alienHandler->SetAdditionalLibs("ConfigFemtoAnalysis.C");
+
 
   alienHandler->SetGridDataDir("/alice/data/2011/LHC11h_2");
   alienHandler->SetDataPattern("*ESDs/pass2/AOD145/*/AliAOD.root");
@@ -140,6 +144,7 @@ RunGrid()
   AliAnalysisTaskFemto *pipitask = new AliAnalysisTaskFemto(
     "PiPiTask",
     "$ALICE_PHYSICS/PWGCF/FEMTOSCOPY/macros/Train/PionPionFemto/ConfigFemtoAnalysis.C",
+//    "ConfigFemtoAnalysis.C",
     "\"" + macro_config + "\"",
     kFALSE
   );

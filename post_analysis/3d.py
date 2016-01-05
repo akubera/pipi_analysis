@@ -116,13 +116,8 @@ for analysis in femtolist:
     print("loading", analysis_name, end=' ', flush=True)
 
     TIMESTART = time.monotonic()
-    bg = partial(bin_range,
-                 ratio,
-                #  x_filt=filter_between(*map(ratio.GetXaxis().FindBin, (-0.2, 0.2))),
-                #  y_filt=filter_between(*map(ratio.GetYaxis().FindBin, (-0.2, 0.2))),
-                #  z_filt=filter_between(*map(ratio.GetZaxis().FindBin, (-0.2, 0.2))),
-                 )
-    X = np.array([i for i in bin_centers(ratio, bg)]).T
+    bg = partial(bin_range, ratio)
+    X = np.array([x for x in bin_centers(ratio, bg)]).T
     Y = np.array(list(apply(ratio.GetBinContent, bg())))
     E = np.array(list(apply(ratio.GetBinError, bg())))
     TIMESTOP = time.monotonic()

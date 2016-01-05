@@ -228,18 +228,8 @@ for analysis in femtolist:
 
     bin_offset = 4
 
-    bins = {
-        'xmin': X_Zero - bin_offset,
-        'xmax': X_Zero + bin_offset,
-        'ymin': Y_Zero - bin_offset,
-        'ymax': Y_Zero + bin_offset,
-        'zmin': Z_Zero - bin_offset,
-        'zmax': Z_Zero + bin_offset,
-    }
 
-
-
-    num_qside = q3d_num.ProjectionY("num_qside")
+    num_qside = q3d_num.ProjectionY("num_qside", bins)
     den_qside = q3d_den.ProjectionY("den_qside")
 
     ratio_qs = get_ratio('ratio_qs', num_qside, den_qside, [(-0.4, -0.7), (0.4, 0.7)])

@@ -10,13 +10,13 @@ ALIROOT = aliroot
 .PHONY: all run run_grid clean
 
 
-all: ConfigFemtoAnalysis.C
+all:
 
 
-run: RunMe.C ConfigFemtoAnalysis.C
+run: RunMe.C
 	aliroot -q -x $<
 
-run_grid: RunGrid.C ConfigFemtoAnalysis.C
+run_grid: RunGrid.C
 	aliroot -q -x $<
 
 %.C: src/%.C
