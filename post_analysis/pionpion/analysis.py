@@ -25,3 +25,22 @@ class Analysis:
         Returns the object found at the path given in the name.
         """
         return get_root_object(self._data, name)
+
+    @staticmethod
+    def load_metadata(settings):
+        if not isinstance(settings, TObjString):
+            return
+
+        def tree(): return defaultdict(tree)
+        analysis_meta = tree()
+
+        analysis_meta
+        for s in str(settings).strip("\n").split("\n"):
+                k, v = s.split('=')
+                keys = k.split('.')
+                k = analysis_meta
+                for key in keys[:-1]:
+                    k = k[key]
+                k[keys[-1]] = v
+                # for key in k.split('.'):
+        return analysis_meta
