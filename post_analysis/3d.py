@@ -117,7 +117,7 @@ for analysis in femtolist:
 
     TIMESTART = time.monotonic()
     bg = partial(bin_range, ratio)
-    X = np.array([x for x in bin_centers(ratio, bg)]).T
+    X = np.array(list(bin_centers(ratio, bg))).T
     Y = np.array(list(apply(ratio.GetBinContent, bg())))
     E = np.array(list(apply(ratio.GetBinError, bg())))
     TIMESTOP = time.monotonic()
@@ -197,11 +197,8 @@ for analysis in femtolist:
     # qo_domain = np.array(list(tuple(bin_centers(ratio, lambda: qo_x_bins))
     #                           for qo_x_bins in qo_bins.values()))
 
-    qo_domain = np.array(list(list([x, y, z]
-                              for y in yspace
-                              for z in zspace)
-                              for x in xspace
-                            ))
+    qo_domain = np.array([[[x, y, z] for y in yspace for z in zspace]
+                          for x in xspace])
     qo_y = np.array(list(model_3d(fit_res.params, x) for x in qo_domain))
 
     # cqout = ROOT.TCanvas("cqout")
