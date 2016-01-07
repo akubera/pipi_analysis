@@ -63,6 +63,9 @@ class Histogram:
     def bin_at(self, x, y=0.0, z=0.0):
         return tuple(axis.bin_at(a) for axis, a in zip(self._axes, (x, y, z)))
 
+    def getslice(self, x, y=0.0, z=0.0):
+        return tuple(axis.getslice(a) for axis, a in zip(self._axes, (x, y, z)))
+
     def value_at(self, x, y=0.0, z=0.0):
         i, j, k = self.bin_at(x, y, z)
         print("[value_at]", (x, y, z), (i,j,k))

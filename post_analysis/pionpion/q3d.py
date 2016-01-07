@@ -13,13 +13,26 @@ from itertools import starmap
 from .histogram import Histogram
 
 
-class Q3D(Histogram):
+class Q3D:
     """
-    Class wrapping a Q_{out,side,long} histogram for easy access
+    Class wrapping a Q_{out,side,long} analysis - containing numerator and
+    denominator histograms.
     """
 
-    def __init__(self, hist):
-        super().__init__(hist)
+    def __init__(self, numerator, denominator, do_sanity_check=True):
+        self.num = Histogram(numerator)
+        self.den = Histogram(denominator)
+
+        if do_sanity_check:
+            sanity_bins = self.num.getslice((-.1, .1), (-.1, .1), (-.1, .1))
+            sanity_data = np.array([
+                self.num._ptr.GetBinContent(x, y, z)
+                for x in range(sanity_bins[0].start, sanity_bins[0].stop)
+                for y in range(sanity_bins[1].start, sanity_bins[1].stop)
+                for z in range(sanity_bins[2].start, sanity_bins[2].stop)
+            ])
+            # simple sanity test
+            assert all(self.num[sanity_bins].flatten() == sanity_data)
 
     def bins_to_slices(self,
                        x_domain=(None, None),
@@ -65,7 +78,10 @@ class Q3D(Histogram):
             z_domain=z_domain
         )
 
-        data = self.data[x_slice, y_slice, z_slice]
+        num_slice = self.num[x_slice, y_slice, z_slice]
+        den_slice = self.den[x_slice, y_slice, z_slice]
+
+        data = num_slice / den_slice
         # print("Sliced data", data.shape)
         # print(data)
         sum = data.sum(axis=(1, 2))
