@@ -8,9 +8,9 @@ import numpy as np
 HBAR_C = 0.1973269788 # GeV·fm
 
 
-def fitfunc_qinv(params, q, data=None):
+def fitfunc_qinv_gauss(params, q, data=None):
     """
-    fitfunc_qinv
+    fitfunc_qinv_gauss
     ~~~~~~~~~~~~
     1D Gaussian fit
 
@@ -26,7 +26,7 @@ def fitfunc_qinv(params, q, data=None):
 
     """
 
-    t = -(q * params['radius']) ** 2
+    t = -(q * params['radius'] / HBAR_C) ** 2
     model = 1 + params['lam'] * np.exp(list(t))
 
     if data is None:
@@ -45,6 +45,7 @@ def fitfunc_qinv(params, q, data=None):
     res = np.sqrt( resid ** 2 / data[1] ** 2 )
     return res
 
+fitfunc_qinv = fitfunc_qinv_gauss
 
 def fitfunc_3d(params, q, data=None):
     """
