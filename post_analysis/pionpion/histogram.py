@@ -119,6 +119,28 @@ class Histogram:
 
         return projection_data.sum(axis=tuple(iter(summed_axes)))
 
+    def __str__(self):
+        return '<{dim}D Histogram "{name}" ({sizes}) at {id}>'.format(
+            name=self._ptr.GetName(),
+            dim=self.data.ndim,
+            sizes="-".join(map(str, self.data.shape)),
+            id="0x%x" % id(self),
+        )
+
+    #
+    # Math Functions
+    #
+    def __truediv__(self, rhs):
+        if isinstance(rhs, Histogram):
+            quotient = self._ptr.Clone()
+            quotient.Divide(rhs._ptr)
+            return Histogram(quotient)
+        elif isinstance(rhs, float):
+            clone = self._ptr.Clone()
+            clone.Scale(1.0 / rhs)
+            return Histogram(clone)
+        else:
+            raise TypeError("Cannot divide histogram by %r" % rhs)
 
     class Axis:
         """
