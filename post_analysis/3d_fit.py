@@ -12,6 +12,7 @@ import types
 import numbers
 import ctypes
 import time
+from pionpion.root_helpers import get_root_object
 from pionpion.analysis import Analysis
 from pionpion.q3d import Q3D
 from pionpion.fit import (
@@ -38,6 +39,11 @@ print("Done (%fs)" % (time.monotonic() - TSTART), file=sys.stderr)
 CACHE = []
 STORED_CANVASES = []
 
+NUM_QINV_PATH = "Num_qinv_pip Num_qinv_pim Numc_qinv_pip Numc_qinv_pim".split()
+DEN_QINV_PATH = "Den_qinv_pip Den_qinv_pim Denc_qinv_pip Denc_qinv_pim".split()
+NUM_Q3D_PATH = ["Num_q3D_pip", "Num_q3D_pim"]
+DEN_Q3D_PATH = ["Den_q3D_pip", "Den_q3D_pim"]
+
 
 def gen_canvas():
     """
@@ -51,26 +57,6 @@ def gen_canvas():
     return canvas
 
 # gen_canvas = iter(gen_canvas())
-
-
-def get_root_object(obj, paths):
-    if isinstance(paths, (list, tuple)):
-        path = paths.pop(0)
-    else:
-        path, paths = paths, []
-
-    key, *rest = path.split('.', 1)
-    try:
-        new_obj = obj.Get(key)
-    except AttributeError:
-        new_obj = obj.FindObject(key)
-
-    if new_obj == None and len(paths) is not 0:
-        return get_root_object(obj, paths)
-    elif new_obj == None or len(rest) is 0:
-        return new_obj
-    else:
-        return get_root_object(new_obj, rest[0])
 
 
 def hist_method_to_array(hist, func):
@@ -128,19 +114,19 @@ TRACK_CUT_INFO_STR = """\
 """
 
 
-def do_qinv_analysis(num, den, cf_title="CF; q (GeV); CF(q)"):
+def do_qinv_analysis(num, den, cf_title="CF; q (GeV); CF(q)", output_imagename='qinv.png'):
     """
     Code performing the qinv analysis - should probably be moved to a submodule
     """
 
-    norm_x_range = 0.4, 0.7
+    norm_x_range = 0.8, 1.1
     num_norm_bin_range = map(num.FindBin, norm_x_range)
     den_norm_bin_range = map(num.FindBin, norm_x_range)
 
     num_scale = 1.0 / num.Integral(*num_norm_bin_range)
     den_scale = 1.0 / den.Integral(*den_norm_bin_range)
 
-    ratio = get_ratio('ratio', num, den, (0.4, 0.7))
+    ratio = get_ratio('ratio', num, den, norm_x_range)
     ratio.SetTitle(cf_title)
     ratio.Write()
 
@@ -164,8 +150,11 @@ def do_qinv_analysis(num, den, cf_title="CF; q (GeV); CF(q)"):
 
     data = (y_vals, e_vals)
 
+    TIMESTART = time.monotonic()
     qinv_fit = minimize(fitfunc_qinv, qinv_params, args=(x_vals, data))
+    TIME_DELTA = time.monotonic() - TIMESTART
     report_fit(qinv_fit)
+    print("fitting time %0.3fs (%0.3f ms/call)" % (TIME_DELTA, TIME_DELTA * 1e3 / qinv_fit.nfev))
 
     FIT_X = np.linspace(X[0], X[-1], 300)
     FIT_Y = fitfunc_qinv(qinv_fit.params, FIT_X)
@@ -180,6 +169,9 @@ def do_qinv_analysis(num, den, cf_title="CF; q (GeV); CF(q)"):
     fit_plot.SetLineColor(2)
     fit_plot.Draw("same")
     canvas_qinv.Draw()
+    output_image = ROOT.TImage.Create()
+    output_image.FromPad(canvas_qinv)
+    output_image.WriteImage(output_imagename)
 
 
 # Loop over analyses
@@ -209,8 +201,8 @@ for analysis in femtolist:
     # Qinv
     #
 
-    num = get_root_object(analysis, ["Numc_qinv_pip", "Numc_qinv_pim"])
-    den = get_root_object(analysis, ["Denc_qinv_pip", "Denc_qinv_pim"])
+    num = get_root_object(analysis, NUM_QINV_PATH)
+    den = get_root_object(analysis, DEN_QINV_PATH)
 
     if num == None or den == None:
         print("Missing Qinv plots")
@@ -219,7 +211,7 @@ for analysis in femtolist:
     else:
         print(" ***** Q_inv Study *****\n")
         qinv_title = make_cf_title(title='Q_{inv}', units='q_{inv}')
-        do_qinv_analysis(num, den, cf_title=qinv_title)
+        do_qinv_analysis(num, den, cf_title=qinv_title, output_imagename=analysis_name + '_qinv.png')
 
     #
     # Qinv - Kt binned
@@ -227,16 +219,16 @@ for analysis in femtolist:
     kt_qinv = get_root_object(analysis, ["KT_Qinv"])
     if kt_qinv != None:
         for ktbin in kt_qinv:
-            ktn = get_root_object(ktbin, ["Numc_qinv_pip", "Numc_qinv_pim"])
-            ktd = get_root_object(ktbin, ["Denc_qinv_pip", "Denc_qinv_pim"])
+            ktn = get_root_object(ktbin, NUM_QINV_PATH)
+            ktd = get_root_object(ktbin, DEN_QINV_PATH)
 
 
     #
     # 3D
     #
 
-    q3d_num = get_root_object(analysis, ["Num_q3D_pip", "Num_q3D_pim"])
-    q3d_den = get_root_object(analysis, ["Den_q3D_pip", "Den_q3D_pim"])
+    q3d_num = get_root_object(analysis, NUM_Q3D_PATH)
+    q3d_den = get_root_object(analysis, DEN_Q3D_PATH)
 
     if q3d_num == None or q3d_den == None:
         print("No 3D histogram found in", analysis_name)
@@ -245,40 +237,38 @@ for analysis in femtolist:
     print(" ***** 3D Study Q{osl} *****\n")
 
     q3d_params = Parameters()
-    q3d_params.add('r_out', value=1.0, min=0.0)
-    q3d_params.add('r_side', value=1.0, min=0.0)
-    q3d_params.add('r_long', value=1.0, min=0.0)
-    q3d_params.add('lam', value=0.5)
+    q3d_params.add('r_out', value=6.0, min=0.0)
+    q3d_params.add('r_side', value=6.0, min=0.0)
+    q3d_params.add('r_long', value=6.0, min=0.0)
+    q3d_params.add('lam', value=1.0)
     q3d_params.add('norm', value=1.0, min=0.0)
 
     hist_3d = Q3D(q3d_num, q3d_den)
-    print("shapes")
-    for o in (hist_3d.num, hist_3d.den):
-        for oo in (o.data, o.error):
-            print(' ', oo.shape)
 
-    print("domain")
-    print(hist_3d.num._axes[0].domain())
-    domains_ranges = (-0.3, 0.3), (-0.3, 0.01), (-0.3, 0.3)
-    domains_ranges = (-1.0, 1.0), (-1.0, 1.0), (-1.0, 1.0)
-    # domains_ranges = (2, -2), (2, -2), (2, -2)
-    # domains = (2, 70), (2, 70), (2, 70)
+    # domains_ranges = (-0.2, 0.2), (-0.2, 0.2), (-0.2, 0.2)
+    domains_ranges = (2, -2), (2, -2), (2, -2)
+    domains_ranges = (1, -2), (1, -2), (1, -2)
     slices = hist_3d.num.getslice(*domains_ranges)
     # slices = slice(None), slice(None), slice(None)
     print('slices:', slices)
     t = time.monotonic()
     dom = hist_3d.num.bounded_domain(*slices)
-    print("domain shape", dom.shape)
-    print("ratio shape:", hist_3d.ratio.shape)
-    print("[ratio] shape:", hist_3d.ratio[slices].shape)
 
-    ratio = hist_3d.ratio_data[slices].flatten()
+    # mask so that only bins with non-zero errors are chosen
     ratio_err = hist_3d.ratio.error[slices].flatten()
+    error_mask = ratio_err != 0
+    dom = dom[error_mask]
+    ratio_err = ratio_err[error_mask]
+    ratio = hist_3d.ratio_data[slices].flatten()[error_mask]
+
+    print("dom shape:", dom.shape)
     print("data shape:", ratio.shape)
+    print("error shape:", ratio_err.shape)
     TIMESTART = time.monotonic()
     fit_res = minimize(fitfunc_3d, q3d_params, args=(dom, (ratio, ratio_err)))
-    print("fitting time %0.3fs" % (time.monotonic() - TIMESTART))
+    TIME_DELTA = time.monotonic() - TIMESTART
     report_fit(fit_res)
+    print("fitting time %0.3fss (%0.3f ms/call)" % (TIME_DELTA, TIME_DELTA * 1e3 / fit_res.nfev))
     # projection_bins = hist_3d.num.bin_ranges([-0.01, 0.01], [-0.01, 0.01], [-0.01, 0.01])
     # xmin, xmax, ymin, ymax, zmin, zmax = [x for x in projection_bins for x in x]
     cr = (0.0, 2)
@@ -286,7 +276,7 @@ for analysis in femtolist:
 
     qout = hist_3d.ratio._ptr.ProjectionX("qout", ymin, ymax-1, zmin, zmax-1)
     qout.SetStats(False)
-
+    qout.SetTitle("Q_{out};; CF(q_{out})")
     best_fit_X = hist_3d.ratio._axes[0].data[xmin:xmax]
     best_fit_Y = hist_3d.ratio._axes[1].data[ymin:ymax]
     best_fit_Z = hist_3d.ratio._axes[2].data[zmin:zmax]
@@ -321,6 +311,7 @@ for analysis in femtolist:
 
     qside = hist_3d.ratio._ptr.ProjectionY("qside", xmin, xmax-1, zmin, zmax-1)
     qside.SetStats(False)
+    qside.SetTitle("Q_{side};; CF(q_{side})")
 
     qs_graph = ROOT.TGraph(len(qs_Y), qs_X, qs_Y)
     qs_graph.SetLineColor(2)
@@ -336,6 +327,7 @@ for analysis in femtolist:
 
     qlong = hist_3d.ratio._ptr.ProjectionZ("qlong", xmin, xmax-1, ymin, ymax-1)
     qlong.SetStats(False)
+    qlong.SetTitle("Q_{long};; CF(q_{long})")
 
     ql_graph = ROOT.TGraph(len(ql_Y), ql_X, ql_Y)
     ql_graph.SetLineColor(2)
@@ -348,6 +340,9 @@ for analysis in femtolist:
         p[1].Draw("same")
 
     output_canvas.Draw()
+    # output_image = ROOT.TImage.Create()
+    # output_image.FromPad(output_canvas)
+    # output_image.WriteImage(analysis_name + "_q3d.png")
 
     input()
 
