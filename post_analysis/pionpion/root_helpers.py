@@ -10,7 +10,10 @@ def get_root_object(obj, paths):
     Return a root object contained in the obj
     """
     if isinstance(paths, (list, tuple)):
-        path = paths.pop(0)
+        if len(paths):
+            path, paths = paths[0], paths[1:]
+        else:
+            return None
     else:
         path, paths = paths, []
 
