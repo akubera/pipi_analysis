@@ -15,10 +15,10 @@ def fitfunc_qinv_gauss(params, q, data=None):
     1D Gaussian fit
 
     params:
-        radius - The qinv radius
-        lam - The lambda parameter
-    q: An array of array
-    data: {optional} observed data to which we will calculate the residual
+        radius - The qinv radius (units: fm)
+        lam - The lambda parameter (unitless)
+    q: An numpy array of q_inv values (units: GeV)
+    data: {optional} observed data with which we will calculate the residual
 
     .. math::
 
@@ -45,26 +45,68 @@ def fitfunc_qinv_gauss(params, q, data=None):
     res = np.sqrt( resid ** 2 / data[1] ** 2 )
     return res
 
+
+def fitfunc_qinv_lorentz(params, q, data=None):
+    """
+    fitfunc_qinv_lorentz
+    ~~~~~~~~~~~~
+    1D Lorentzian fit
+
+    .. math::
+
+        CF(q_{inv}) = 1 + λ \\frac{R^2}{R^2 + q_{inv}^2}
+
+
+    params:
+        radius - ??
+        lam - The lambda scaling parameter
+
+    q: An array of q_inv data (units: GeV)
+    data: {optional} observed data with which we will calculate the residual
+    """
+    r_squared = params['radius'].value ** 2
+    lam = params['lam']
+
+    model = 1 + lam * r_squared / (r_squared + q ** 2)
+
+    if data is None:
+        return model
+
+    shape = np.shape(data)
+    func_count = shape[0] / 2
+
+    if func_count % 1:
+        raise ValueError("Data shape not multiple of 2. Mismatched data and errors")
+
+    # resid = sum(np.sqrt((data[i] - model) ** 2 / data[i + 1] ** 2)
+    #             for i in range(0, shape[0], 2))
+
+    resid = model - data[0]
+    res = np.sqrt( resid ** 2 / data[1] ** 2 )
+    return res
+
+
 fitfunc_qinv = fitfunc_qinv_gauss
+# fitfunc_qinv = fitfunc_qinv_lorentz
+
 
 def fitfunc_3d(params, q, data=None):
     """
     Do 3D Gaussian fit of data.
 
-    params:
-      norm - "global" normalization factor
-      lam - lambda parameter
-      r_out - radius of the out parameter
-      r_side - radius of the side parameter
-      r_long - radius of the long parameter
-
-    q: 3xN matrix of each point  values in out-side-long
-    data: {optional} observed data to which we will calculate the residual
-
     .. math::
 
         CF(\\vec{q}) = NORM(1 + λ exp( -((qo * [Ro])^2 + (qs * [Rs])^2 + (ql * [Rl])^2) ))
 
+    params:
+      norm - "global" normalization factor (unitless)
+      lam - lambda parameter (unitless)
+      r_out - radius of the out parameter (units: fm)
+      r_side - radius of the side parameter (units: fm)
+      r_long - radius of the long parameter (units: fm)
+
+    q: 3xN matrix of each point in out-side-long space (units: GeV)
+    data: {optional} observed data to which we will calculate the residual
     """
 
     # extract parameters
