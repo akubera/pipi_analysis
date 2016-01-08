@@ -42,12 +42,18 @@ void process_arguments();
 std::set<int> runs;
 std::vector<int>* gBitmap;
 
-TString output_filename = "MultiResults_11.root",
+TString output_filename = "MultiResults_2016-01-08_01.root",
          macro_filename = "$ALICE_PHYSICS/PWGCF/FEMTOSCOPY/macros/Train/PionPionFemto/ConfigFemtoAnalysis.C";
 
 // const TString config = "\"@vertex_bins = 5;{0:5, 0:10:20:30}; +p; +m; ~do_kt_qinv = true;\"";
 // const TString config = "\"\"";
-TString config = "\"$pion_1_max_impact_z = 0.5; $pion_1_max_impact_xy = 0.4; $pion_1_max_tpc_chi_ndof = 0.024; $pion_1_max_its_chi_ndof = 0.025;\"";
+TString config = "\""
+"~do_avg_sep_cf = true; "
+"@min_coll_size = 40; "
+"$pion_1_max_impact_z = 0.5; "
+"$pion_1_max_impact_xy = 0.4; "
+"$pion_1_max_tpc_chi_ndof = 0.024; "
+"$pion_1_max_its_chi_ndof = 0.024;\"";
 
 int use_runs[] = {170163, 0};
 //int use_runs[] = {170593, 170572, 170388, 170387, 0};
@@ -188,8 +194,9 @@ load_files(TChain *input_files = NULL)
 //      input_files->Add("/alice/data/2011/LHC11h_2/000169506/ESDs/pass2/AOD145/0002/AliAOD.root");
 //       input_files->Add("/alice/data/2011/LHC11h_2/000169506/ESDs/pass2/AOD145/0003/AliAOD.root");
 //       input_files->Add("/alice/data/2011/LHC11h_2/000169506/ESDs/pass2/AOD145/0004/AliAOD.root");
-//       input_files->Add("/alice/data/2011/LHC11h_2/000169506/ESDs/pass2/AOD145/0005/AliAOD.root");
-       input_files->Add("/alice/data/2011/LHC11h_2/000169506/ESDs/pass2/AOD145/0026/AliAOD.root");
+      input_files->Add("/alice/data/2011/LHC11h_2/000169506/ESDs/pass2/AOD145/0005/AliAOD.root");
+      //  input_files->Add("/alice/data/2011/LHC11h_2/000169506/ESDs/pass2/AOD145/0026/AliAOD.root");
+      //  input_files->Add("/alice/data/2015/LHC15o/000245145/pass1/AOD/001/AliAOD.root");
       // input_files->Add("/alice/data/2011/LHC11h_2/000169506/ESDs/pass2/AOD145/0034/AliAOD.root");
       // input_files->Add("/alice/data/2011/LHC11h_2/000169506/ESDs/pass2/AOD145/1226/AliAOD.root");
       //

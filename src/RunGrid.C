@@ -10,11 +10,11 @@ bool is_mc_analysis = false;
 
 
 TString grid_output_dir = "output";
-TString grid_working_dir = "work_pipi/2015-12-24.01";
+TString grid_working_dir = "work_pipi/2016-01-08";
 
 TString runmode =
-  // "full";
-   "terminate";
+  "full";
+  //  "terminate";
 
 
 #define DEV_LOCAL
@@ -51,7 +51,13 @@ void process_arguments();
 std::set<int> runs;
 std::vector<int>* gBitmap;
 
-TString macro_config = "$pion_1_max_impact_z = 0.5; $pion_1_max_impact_xy = 0.025";
+TString macro_config = ""
+"~do_avg_sep_cf = true; "
+"@min_coll_size = 40; "
+"$pion_1_max_impact_z = 0.5; "
+"$pion_1_max_impact_xy = 0.4; "
+"$pion_1_max_tpc_chi_ndof = 0.024; "
+"$pion_1_max_its_chi_ndof = 0.024;";
 
 TString output_filename = "PiPi_Analysis_Results.root";
 TString xml_filename =
@@ -84,7 +90,7 @@ RunGrid()
   alienHandler->SetOverwriteMode();
   alienHandler->SetRunMode(runmode);
   alienHandler->SetAPIVersion("V1.1x");
-  alienHandler->SetAliPhysicsVersion("vAN-20151224-1");
+  alienHandler->SetAliPhysicsVersion("vAN-20160108-1");
   alienHandler->SetRunPrefix("000");
   alienHandler->SetDropToShell(kFALSE);
 
