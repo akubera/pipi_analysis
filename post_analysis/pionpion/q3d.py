@@ -23,6 +23,12 @@ class Q3D:
         self.num = Histogram(numerator)
         self.den = Histogram(denominator)
 
+        assert self.num.shape == self.den.shape
+        assert all(n[i] == d[i]
+                   for n, d in zip(self.num._axes, self.den._axes)
+                   for i in (2, 10, -2))
+
+
         if do_sanity_check:
             sanity_bins = self.num.getslice((-.1, .1), (-.1, .1), (-.1, .1))
             sanity_data = np.array([
@@ -33,6 +39,13 @@ class Q3D:
             ])
             # simple sanity test
             assert all(self.num[sanity_bins].flatten() == sanity_data)
+
+        # store domain
+        self.ratio_data = self.num.data / self.den.data
+        self.ratio_err = self.num.error / self.den.error
+
+        self.ratio = self.num / self.den
+        assert (self.ratio.data == self.ratio_data).all()
 
     def bins_to_slices(self,
                        x_domain=(None, None),

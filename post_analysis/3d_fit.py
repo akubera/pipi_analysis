@@ -7,6 +7,7 @@ import sys
 import numpy as np
 from argparse import ArgumentParser
 from collections import defaultdict
+import itertools
 import types
 import numbers
 import ctypes
@@ -15,6 +16,7 @@ from pionpion.analysis import Analysis
 from pionpion.q3d import Q3D
 from pionpion.fit import (
     fitfunc_qinv,
+    fitfunc_3d,
 )
 
 TSTART = time.monotonic()
@@ -242,7 +244,75 @@ for analysis in femtolist:
 
     print(" ***** 3D Study Q{osl} *****\n")
 
+    q3d_params = Parameters()
+    q3d_params.add('r_out', value=1.0, min=0.0)
+    q3d_params.add('r_side', value=1.0, min=0.0)
+    q3d_params.add('r_long', value=1.0, min=0.0)
+    q3d_params.add('lam', value=0.5)
+    q3d_params.add('norm', value=1.0, min=0.0)
+
     hist_3d = Q3D(q3d_num, q3d_den)
+    print("shapes")
+    for o in (hist_3d.num, hist_3d.den):
+        for oo in (o.data, o.error):
+            print(' ', oo.shape)
+
+    print("domain")
+    print(hist_3d.num._axes[0].domain())
+    domains_ranges = (-0.3, 0.3), (-0.3, 0.01), (-0.3, 0.3)
+    domains_ranges = (-1.0, 1.0), (-1.0, 1.0), (-1.0, 1.0)
+    # domains_ranges = (2, -2), (2, -2), (2, -2)
+    # domains = (2, 70), (2, 70), (2, 70)
+    slices = hist_3d.num.getslice(*domains_ranges)
+    # slices = slice(None), slice(None), slice(None)
+    print('slices:', slices)
+    t = time.monotonic()
+    dom = hist_3d.num.bounded_domain(*slices)
+    print("domain shape", dom.shape)
+    print("ratio shape:", hist_3d.ratio.shape)
+    print("[ratio] shape:", hist_3d.ratio[slices].shape)
+
+    ratio = hist_3d.ratio_data[slices].flatten()
+    ratio_err = hist_3d.ratio.error[slices].flatten()
+    print("data shape:", ratio.shape)
+    TIMESTART = time.monotonic()
+    fit_res = minimize(fitfunc_3d, q3d_params, args=(dom, (ratio, ratio_err)))
+    print("fitting time %0.3fs" % (time.monotonic() - TIMESTART))
+    report_fit(fit_res)
+    # projection_bins = hist_3d.num.bin_ranges([-0.01, 0.01], [-0.01, 0.01], [-0.01, 0.01])
+    # xmin, xmax, ymin, ymax, zmin, zmax = [x for x in projection_bins for x in x]
+    cr = (0.0, 2)
+    xmin, xmax, ymin, ymax, zmin, zmax = hist_3d.num.centered_bin_ranges(cr, cr, cr, expand=True, inclusive=True)
+
+    qout = hist_3d.ratio._ptr.ProjectionX("qout", ymin, ymax-1, zmin, zmax-1)
+    qout.SetStats(False)
+    qout.Draw()
+
+    best_fit_X = hist_3d.ratio._axes[0].data[xmin:xmax]
+    best_fit_Y = hist_3d.ratio._axes[1].data[ymin:ymax]
+    best_fit_Z = hist_3d.ratio._axes[2].data[zmin:zmax]
+    # print('xspace', best_fit_X)
+    # print('yspace', best_fit_Y)
+    # print('zspace', best_fit_Z)
+
+    qout_fit_domain = np.linspace(-0.6, 0.6, 200)
+    best_fit_Domain = np.array([[[x, y, z]
+                                  for y in best_fit_Y
+                                  for z in best_fit_Z
+                                  ] for x in qout_fit_domain])
+    best_fit_qout = np.array([fitfunc_3d(fit_res.params, x)
+                              for x in best_fit_Domain])
+    qo_Y = np.sum(best_fit_qout, axis=1)
+    qo_X = qout_fit_domain
+    assert qo_Y.shape == qo_X.shape
+
+    qo_graph = ROOT.TGraph(len(qo_X), qo_X, qo_Y)
+    qo_graph.SetLineColor(2)
+    qo_graph.Draw("same")
+
+    dom = np.array(list(hist_3d.num.domain()))
+    print(dom.shape)
+    print(dom)
 
     y_dom = (-0.01, 0.01)
     z_dom = (-0.01, 0.01)
@@ -264,9 +334,7 @@ for analysis in femtolist:
     diff = num_qout_a - q_out_num
 
     print("", diff[:10])
-    print("", all(num_qout_a == q_out_num))
-    break
-
+    # break
 
     den_qout = q3d_den.ProjectionX("den_qout")
 
@@ -280,8 +348,9 @@ for analysis in femtolist:
 
     bin_offset = 4
 
+    bins = tuple(axis.FindBin(0.0) for axis in hist_3d.num._axes)
 
-    num_qside = q3d_num.ProjectionY("num_qside", bins)
+    num_qside = q3d_num.ProjectionY("num_qside", *bins)
     den_qside = q3d_den.ProjectionY("den_qside")
 
     ratio_qs = get_ratio('ratio_qs', num_qside, den_qside, [(-0.4, -0.7), (0.4, 0.7)])
@@ -296,7 +365,7 @@ for analysis in femtolist:
     ratio_ql.Write()
 
 
-input()
+    input()
 
     # ratio.Draw()
     # break

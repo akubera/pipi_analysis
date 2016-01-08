@@ -122,7 +122,7 @@ def fitfunc_3d(params, q, data=None):
     # create the exponent parameter by multiplying each radius by the
     # appropriate q component (do shape check to ensure appropriate (1x3 * 3xN)
     # matrix multiplication)
-    if np.shape(x)[1] == 3:
+    if np.shape(q)[1] == 3:
         t = (rr * q) ** 2
     else:
         t = (rr * q.T) ** 2
