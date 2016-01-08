@@ -57,8 +57,25 @@ class Histogram:
         return self.data[val]
 
     def domain(self, *ranges):
-        ranges = tuple(axis.getbin(x) for axis, x in zip(self._axes, ranges))
-        itertools.product(ranges)
+        if ranges is ():
+            domains = iter(axis.domain() for axis in self._axes)
+        else:
+            axis_range_pairs = zip(self._axes, ranges)
+            domains = iter(axis.domain(r) for axis, r in axis_range_pairs)
+        return itertools.product(*domains)
+
+    def bounded_domain(self, *ranges):
+        """
+        Return a numpy array containing the bin centers of the range that
+        this axis' domain.
+        """
+        if ranges is ():
+            domains = iter(axis.domain() for axis in self._axes)
+        else:
+            axis_range_pairs = zip(self._axes, ranges)
+            domains = iter(axis.bounded_domain(r) for axis, r in axis_range_pairs)
+
+        return np.array([l for l in itertools.product(*domains)])
 
     def bin_at(self, x, y=0.0, z=0.0):
         return tuple(axis.bin_at(a) for axis, a in zip(self._axes, (x, y, z)))
@@ -184,6 +201,12 @@ class Histogram:
             """
             return getattr(self._ptr, attr)
 
+        def __getitem__(self, index):
+            """
+            Returns the value of bin specified by index
+            """
+            return self.data[index]
+
         def bin_at(self, value):
             self._ptr
             return self._ptr.FindBin(value)
@@ -210,11 +233,43 @@ class Histogram:
             """
             return self.getbin(value)
 
-        def bin_generator(self, values):
-            print(l)
+        def bin_range(self, value):
+            """
+            Returns a range object which returns the bins specified by the
+            argument. If value is a floating point number, the range will return
+            only the bin the value falls into. If value is an integer, range
+            will only return that value. If value is a pair (tuple or list) of
+            floats or ints, the range interates through all bins falling
+            between the two bins.
+            """
+            asbins = self.getbin(value)
+            if isinstance(asbins, int):
+                start = asbins
+                stop = asbins + 1
+            elif isinstance(asbins, slice):
+                start = asbins.start
+                stop = asbins.start + 1
 
-        def domain(self, space):
-            return np.array(map(self._ptr.GetBinCenter, space))
+            return range(start, stop)
+
+        def domain(self, n=None):
+            """
+            Return a numpy array containing the floating point values within
+            this axis' domain. If no 'n' parameter is specified, this is a copy
+            of the data axis' data
+            """
+            if n is None:
+                return np.copy(self.data)
+            else:
+                return np.linspace(n, self.data[0], self.data[-1])
+
+        def bounded_domain(self, value):
+            """
+            Return a numpy array containing the bin centers of the range that
+            this axis' domain.
+            """
+            s = self.getslice(value)
+            return self.data[s]
 
 
     class Mask:
