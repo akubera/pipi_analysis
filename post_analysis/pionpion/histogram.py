@@ -26,7 +26,7 @@ class Histogram:
         self._ptr = hist
         self.data = root_numpy.hist2array(self._ptr, include_overflow=True)
         # add two overflow bins
-        error_shape = np.array(list(self.data.shape)) + [2, 2, 2]
+        # error_shape = np.array(list(self.data.shape)) + [2, 2, 2]
         error_shape = self.data.shape
         errors = root_numpy.array(self._ptr.GetSumw2())
         self.error = np.sqrt(errors).reshape(error_shape)
@@ -38,6 +38,7 @@ class Histogram:
             [axis.GetBinCenter(i) for i in range(1, axis.GetNbins() + 1)]
             for axis in self._axes
         ))
+        assert self.data.shape == tuple(a.data.shape[0] for a in self._axes)
         self.mask = Histogram.Mask(self)
 
     @property
@@ -77,6 +78,31 @@ class Histogram:
 
         return np.array([l for l in itertools.product(*domains)])
 
+    def bin_ranges(self, *ranges):
+        """
+        zips ranges with axes to generate bin_ranges
+        """
+        return tuple(a.getbin(r) for a, r in zip(self._axes, ranges))
+
+    def centered_bin_ranges(self, *ranges, expand=False, inclusive=False):
+        """
+        Applies centered_bin_range_pair to each axis. Returns tuple of integer
+        pairs, or if expand is True, returns one flattened tuple of ints.
+        """
+        res = []
+        for r, a in zip(ranges, self._axes):
+            if r is not None:
+                val = a.centered_bin_range_pair(*r)
+                if inclusive:
+                    val = val[0], val[1] - 1
+                res.append(val)
+            else:
+                res.append(((), ()))
+
+        if expand:
+            return tuple(x for x in res for x in x)
+        return res
+
     def bin_at(self, x, y=0.0, z=0.0):
         return tuple(axis.bin_at(a) for axis, a in zip(self._axes, (x, y, z)))
 
@@ -85,11 +111,9 @@ class Histogram:
 
     def value_at(self, x, y=0.0, z=0.0):
         i, j, k = self.bin_at(x, y, z)
-        print("[value_at]", (x, y, z), (i,j,k))
         return self.data[i, j, k]
 
     def value_in(self, i, j=0, k=0):
-        print("[value_in]", (i,j,k))
         return self.data[i, j, k]
 
     def project_1d(self, axis_idx, *axis_ranges, bounds=(None, None)):
@@ -154,7 +178,8 @@ class Histogram:
         if isinstance(rhs, Histogram):
             quotient = self._ptr.Clone()
             quotient.Divide(rhs._ptr)
-            return Histogram(quotient)
+            q = Histogram(quotient)
+            return q
         elif isinstance(rhs, float):
             clone = self._ptr.Clone()
             clone.Scale(1.0 / rhs)
@@ -169,12 +194,13 @@ class Histogram:
 
         def __init__(self, root_TAxis):
             self._ptr = root_TAxis
-
             if not self._ptr.IsVariableBinSize():
-                maxbin = self._ptr.GetNbins()
+                maxbin = self._ptr.GetNbins() + 1
                 self.data = np.linspace(self._ptr.GetBinCenter(0),
                                         self._ptr.GetBinCenter(maxbin),
                                         maxbin + 1)
+                assert all(self._ptr.GetBinCenter(i) - self.data[i] < 1e-9
+                           for i in (0, 1, maxbin // 2, maxbin - 2))
             else:
                 self.data = root_numpy.array(self._ptr.GetXbins())
 
@@ -233,6 +259,24 @@ class Histogram:
             """
             return self.getbin(value)
 
+        def bin_range_pair(self, value):
+            """
+            Returns a pair (tuple) of integers representing the beginning
+            and (exclusive) ending of the range of bins containing the value(s)
+            in value. If value is a floating point, this returns the bin in
+            which this value can be found, and the 'next' bin.
+            """
+            asbins = self.getbin(value)
+            if isinstance(asbins, int):
+                start = asbins
+                stop = asbins + 1
+            elif isinstance(asbins, slice):
+                start = asbins.start
+                stop = asbins.start + 1
+            else:
+                raise ValueError("Cannot find bin_range_pair of %s" % (value))
+            return start, stop
+
         def bin_range(self, value):
             """
             Returns a range object which returns the bins specified by the
@@ -242,15 +286,22 @@ class Histogram:
             floats or ints, the range interates through all bins falling
             between the two bins.
             """
-            asbins = self.getbin(value)
-            if isinstance(asbins, int):
-                start = asbins
-                stop = asbins + 1
-            elif isinstance(asbins, slice):
-                start = asbins.start
-                stop = asbins.start + 1
-
+            start, stop = self.bin_range_pair(value)
             return range(start, stop)
+
+        def centered_bin_range_pair(self, value=0.0, width=1):
+            """
+            Returns a pair (tuple) of integers representing the beginning
+            and (exclusive) ending of the range of bins centered around the
+            bin containing the value parameter. The width parameter shifts the
+            bins above and below the value.
+
+            The range will be $2 * 'width' + 1$ long.
+            """
+            start, stop = self.bin_range_pair(value)
+            start -= width
+            stop += width
+            return start, stop
 
         def domain(self, n=None):
             """
