@@ -286,7 +286,6 @@ for analysis in femtolist:
 
     qout = hist_3d.ratio._ptr.ProjectionX("qout", ymin, ymax-1, zmin, zmax-1)
     qout.SetStats(False)
-    qout.Draw()
 
     best_fit_X = hist_3d.ratio._axes[0].data[xmin:xmax]
     best_fit_Y = hist_3d.ratio._axes[1].data[ymin:ymax]
@@ -295,75 +294,60 @@ for analysis in femtolist:
     # print('yspace', best_fit_Y)
     # print('zspace', best_fit_Z)
 
-    qout_fit_domain = np.linspace(-0.6, 0.6, 200)
+    qo_X = np.linspace(-0.6, 0.6, 200)
+    qs_X = np.linspace(-0.6, 0.6, 200)
+    ql_X = np.linspace(-0.8, 0.8, 200)
+
     best_fit_Domain = np.array([[[x, y, z]
                                   for y in best_fit_Y
                                   for z in best_fit_Z
-                                  ] for x in qout_fit_domain])
+                                  ] for x in qo_X])
     best_fit_qout = np.array([fitfunc_3d(fit_res.params, x)
                               for x in best_fit_Domain])
     qo_Y = np.sum(best_fit_qout, axis=1)
-    qo_X = qout_fit_domain
     assert qo_Y.shape == qo_X.shape
 
     qo_graph = ROOT.TGraph(len(qo_X), qo_X, qo_Y)
     qo_graph.SetLineColor(2)
-    qo_graph.Draw("same")
 
-    dom = np.array(list(hist_3d.num.domain()))
-    print(dom.shape)
-    print(dom)
+    best_fit_Domain = np.array([[[x, y, z]
+                                  for x in best_fit_X
+                                  for z in best_fit_Z
+                                  ] for y in qs_X])
+    best_fit_qout = np.array([fitfunc_3d(fit_res.params, x)
+                              for x in best_fit_Domain])
+    qs_Y = np.sum(best_fit_qout, axis=1)
+    assert qs_X.shape == qs_Y.shape
 
-    y_dom = (-0.01, 0.01)
-    z_dom = (-0.01, 0.01)
-    q_out_num = hist_3d.num.project_1d(0, y_dom, z_dom)
-    print(np.shape(q_out_num))
+    qside = hist_3d.ratio._ptr.ProjectionY("qside", xmin, xmax-1, zmin, zmax-1)
+    qside.SetStats(False)
 
-    out_pro_bin_list = [
-        q3d_num.GetYaxis().FindBin(y_dom[0]),
-        q3d_num.GetYaxis().FindBin(y_dom[1]),
-        q3d_num.GetZaxis().FindBin(z_dom[0]),
-        q3d_num.GetZaxis().FindBin(z_dom[1]),
-    ]
-    print("projection X bins:", out_pro_bin_list)
-    num_qout = q3d_num.ProjectionX("num_qout", *out_pro_bin_list)
-    num_qout_a = root_numpy.hist2array(num_qout, include_overflow=True)
-    print("==>")
-    print("", q_out_num[:8])
-    print("", num_qout_a[:8])
-    diff = num_qout_a - q_out_num
+    qs_graph = ROOT.TGraph(len(qs_Y), qs_X, qs_Y)
+    qs_graph.SetLineColor(2)
 
-    print("", diff[:10])
-    # break
+    best_fit_Domain = np.array([[[x, y, z]
+                                  for x in best_fit_X
+                                  for y in best_fit_Y
+                                  ] for z in ql_X])
+    best_fit_qout = np.array([fitfunc_3d(fit_res.params, x)
+                              for x in best_fit_Domain])
+    ql_Y = np.sum(best_fit_qout, axis=1)
+    assert ql_X.shape == ql_Y.shape
 
-    den_qout = q3d_den.ProjectionX("den_qout")
+    qlong = hist_3d.ratio._ptr.ProjectionZ("qlong", xmin, xmax-1, ymin, ymax-1)
+    qlong.SetStats(False)
 
-    ratio_qo = get_ratio('ratio_qo', num_qout, den_qout, [(-0.4, -0.7), (0.4, 0.7)])
-    ratio_qo.SetTitle(make_cf_title(title='Q_{out}', units='q_{out}'))
-    ratio_qo.Write()
+    ql_graph = ROOT.TGraph(len(ql_Y), ql_X, ql_Y)
+    ql_graph.SetLineColor(2)
 
-    X_Zero = ratio_qo.GetXaxis().FindBin(0)
-    Y_Zero = ratio_qo.GetYaxis().FindBin(0)
-    Z_Zero = ratio_qo.GetZaxis().FindBin(0)
+    output_canvas = ROOT.TCanvas("output")
+    output_canvas.Divide(1, 3, 0, 0)
+    for i, p in enumerate([(qout, qo_graph), (qside, qs_graph), (qlong, ql_graph)]):
+        output_canvas.cd(i + 1)
+        p[0].Draw()
+        p[1].Draw("same")
 
-    bin_offset = 4
-
-    bins = tuple(axis.FindBin(0.0) for axis in hist_3d.num._axes)
-
-    num_qside = q3d_num.ProjectionY("num_qside", *bins)
-    den_qside = q3d_den.ProjectionY("den_qside")
-
-    ratio_qs = get_ratio('ratio_qs', num_qside, den_qside, [(-0.4, -0.7), (0.4, 0.7)])
-    ratio_qs.SetTitle(make_cf_title(title='Q_{side}', units='q_{side}'))
-    ratio_qs.Write()
-
-    num_qlong = q3d_num.ProjectionZ("num_qlong")
-    den_qlong = q3d_den.ProjectionZ("den_qlong")
-
-    ratio_ql = get_ratio('ratio_ql', num_qlong, den_qlong, [(-0.4, -0.7), (0.4, 0.7)])
-    ratio_ql.SetTitle(make_cf_title(title='Q_{long}', units='q_{long}'))
-    ratio_ql.Write()
-
+    output_canvas.Draw()
 
     input()
 
