@@ -20,6 +20,9 @@ from pionpion.fit import (
     fitfunc_3d,
 )
 
+import matplotlib as ml
+import matplotlib.pyplot as plt
+
 TSTART = time.monotonic()
 print("loading ROOT... ", end='', flush=True, file=sys.stderr)
 from lmfit import minimize, Parameters, report_fit
@@ -244,10 +247,30 @@ for analysis in femtolist:
     q3d_params.add('norm', value=1.0, min=0.0)
 
     hist_3d = Q3D(q3d_num, q3d_den)
+    out_side = hist_3d.ratio.project_2d(0, 1, (-0.03, 0.03), bounds_x=(0.0, None))
+    print("out_side")
+    print(out_side.shape)
+    print(out_side)
+
+    fig = plt.figure(figsize=(6, 3.2))
+
+    ax = fig.add_subplot(111)
+    ax.set_title('colorMap')
+    plt.contourf(out_side)
+    ax.set_aspect('equal')
+
+    cax = fig.add_axes([0.12, 0.1, 0.78, 0.8])
+    cax.get_xaxis().set_visible(True)
+    cax.get_yaxis().set_visible(False)
+    cax.patch.set_alpha(0)
+    cax.set_frame_on(False)
+    plt.colorbar(orientation='vertical')
+    plt.show()
+
 
     # domains_ranges = (-0.2, 0.2), (-0.2, 0.2), (-0.2, 0.2)
     domains_ranges = (2, -2), (2, -2), (2, -2)
-    domains_ranges = (1, -2), (1, -2), (1, -2)
+    # domains_ranges = (1, -2), (1, -2), (1, -1)
     slices = hist_3d.num.getslice(*domains_ranges)
     # slices = slice(None), slice(None), slice(None)
     print('slices:', slices)

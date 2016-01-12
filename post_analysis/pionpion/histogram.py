@@ -133,35 +133,51 @@ class Histogram:
         The optional 'bounds' variable is the limit of the projected axis; this
         defaults to no-limit
         """
-        axes = [a for a in self._axes]
-        try:
-            pojection_axis = axes.pop(axis_idx)
-        except (IndexError, TypeError):
-            raise ValueError("histogram has no axis '{}'".format(axis))
+        assert 0 <= axis_idx < self.data.ndim
 
-        ranges = list(a.getslice(r) for r, a in zip(axis_ranges, axes))
-        while len(ranges) != len(self._axes) - 1:
-            ranges.append(slice(None))
+        # merge specified boundries with infinite slice(None) generator
+        bounds = itertools.chain(axis_ranges, itertools.repeat(slice(None)))
 
-        projection_slice = pojection_axis.getslice(bounds)
-        ranges.insert(axis_idx, projection_slice)
-
-        projection_data = self.data[ranges]
-        sum_axis = -1
+        ranges = []
         summed_axes = []
 
-        for i, r in enumerate(ranges):
-            # if not a slice, this range will not produce an extra dimension
-            # in results (nothing to sum over) - skip
-            if not isinstance(r, slice): continue
-            # this range adds an axis to sum over in projection
-            sum_axis += 1
-            # if this range is the result do not sum over it
-            if i == axis_idx: continue
-            # add the axis to the list of axes to sum over
-            summed_axes.append(sum_axis)
+        axes = self._axes
+        for i, axis in enumerate(self._axes):
+            if i == axis_idx:
+                ranges.append(axis.getslice(bounds))
+            else:
+                s = axis.getslice(next(bounds))
+                ranges.append(s)
+                if isinstance(s, slice):
+                    summed_axes.append(i)
 
-        return projection_data.sum(axis=tuple(iter(summed_axes)))
+        res = self.data[ranges].sum(axis=tuple(summed_axes))
+        print('res:', res)
+        return res
+
+    def project_2d(self, axis_x, axis_y, *axis_ranges, bounds_x=slice(None), bounds_y=slice(None)):
+        """
+        Project the histogram into 2 dimensions.
+        """
+        assert axis_x != axis_y
+        assert 0 <= axis_x < self.data.ndim
+        assert 0 <= axis_y < self.data.ndim
+
+        bounds = itertools.chain(axis_ranges, itertools.repeat(slice(None)))
+        ranges = []
+        summed_axes = []
+        for i, axis in enumerate(self._axes):
+            if i == axis_x:
+                ranges.append(axis.getslice(bounds_x))
+            elif i == axis_y:
+                ranges.append(axis.getslice(bounds_y))
+            else:
+                s = axis.getslice(next(bounds))
+                ranges.append(s)
+                if isinstance(s, slice):
+                    summed_axes.append(i)
+
+        return self.data[ranges].sum(axis=tuple(summed_axes))
 
     def __str__(self):
         return '<{dim}D Histogram "{name}" ({sizes}) at {id}>'.format(
