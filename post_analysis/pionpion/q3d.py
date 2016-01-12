@@ -20,8 +20,8 @@ class Q3D:
     """
 
     def __init__(self, numerator, denominator, do_sanity_check=True):
-        self.num = Histogram(numerator)
-        self.den = Histogram(denominator)
+        self.num = Histogram.BuildFromRootHist(numerator)
+        self.den = Histogram.BuildFromRootHist(denominator)
 
         assert self.num.shape == self.den.shape
         assert all(n[i] == d[i]

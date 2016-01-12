@@ -22,7 +22,12 @@ class Histogram:
     # The pointer to the underlying histogram object
     _ptr = None
 
-    def __init__(self, hist):
+    def __init__(self):
+        pass
+
+    @classmethod
+    def BuildFromRootHist(cls, hist):
+        self = cls()
         self._ptr = hist
         self.data = root_numpy.hist2array(self._ptr, include_overflow=True)
         # add two overflow bins
@@ -40,6 +45,7 @@ class Histogram:
         ))
         assert self.data.shape == tuple(a.data.shape[0] for a in self._axes)
         self.mask = Histogram.Mask(self)
+        return self
 
     @property
     def shape(self):
@@ -152,7 +158,6 @@ class Histogram:
                     summed_axes.append(i)
 
         res = self.data[ranges].sum(axis=tuple(summed_axes))
-        print('res:', res)
         return res
 
     def project_2d(self, axis_x, axis_y, *axis_ranges, bounds_x=slice(None), bounds_y=slice(None)):
@@ -194,12 +199,12 @@ class Histogram:
         if isinstance(rhs, Histogram):
             quotient = self._ptr.Clone()
             quotient.Divide(rhs._ptr)
-            q = Histogram(quotient)
+            q = Histogram.BuildFromRootHist(quotient)
             return q
         elif isinstance(rhs, float):
             clone = self._ptr.Clone()
             clone.Scale(1.0 / rhs)
-            return Histogram(clone)
+            return Histogram.BuildFromRootHist(clone)
         else:
             raise TypeError("Cannot divide histogram by %r" % rhs)
 
