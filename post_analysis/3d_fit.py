@@ -164,17 +164,19 @@ def do_qinv_analysis(num, den, cf_title="CF; q (GeV); CF(q)", output_imagename='
 
     canvas_qinv = gen_canvas()
     # canvas_qinv.cd(1)
+    ratio.GetXaxis().SetRangeUser(0.0, 0.2)
+    ratio.Draw()
 
     fit_plot = TGraph(len(FIT_X), FIT_X, FIT_Y)
     CACHE.append(fit_plot)
 
-    ratio.Draw()
     fit_plot.SetLineColor(2)
     fit_plot.Draw("same")
     canvas_qinv.Draw()
-    output_image = ROOT.TImage.Create()
-    output_image.FromPad(canvas_qinv)
-    output_image.WriteImage(output_imagename)
+    canvas_qinv.SaveAs(output_imagename)
+    # output_image = ROOT.TImage.Create()
+    # output_image.FromPad(canvas_qinv)
+    # output_image.WriteImage(output_imagename)
 
 
 # Loop over analyses
@@ -191,7 +193,8 @@ for analysis in femtolist:
     if analysis_meta is None:
         print("Analysis '%s' is missing metadata. Skipping")
         continue
-
+    from pprint import pprint
+    pprint(analysis_meta)
     track_meta = analysis_meta['AliFemtoSimpleAnalysis']['AliFemtoESDTrackCut']
     print(TRACK_CUT_INFO_STR.format(**track_meta))
 
@@ -265,7 +268,7 @@ for analysis in femtolist:
     cax.patch.set_alpha(0)
     cax.set_frame_on(False)
     plt.colorbar(orientation='vertical')
-    plt.show()
+    # plt.show()
 
 
     # domains_ranges = (-0.2, 0.2), (-0.2, 0.2), (-0.2, 0.2)
@@ -297,8 +300,24 @@ for analysis in femtolist:
     cr = (0.0, 2)
     xmin, xmax, ymin, ymax, zmin, zmax = hist_3d.num.centered_bin_ranges(cr, cr, cr, expand=True, inclusive=True)
 
+    # hist_3d.ratio._ptr.Scale(1.0 / fit_res.params['norm'])
+    # hist_3d.ratio_data = hist_3d.ratio_data / fit_res.params['norm']
+
+    out_side_cnvs = ROOT.TCanvas("out_side")
+    zz = hist_3d.ratio._ptr.GetZaxis().FindBin(0.0)
+    hist_3d.ratio._ptr.GetZaxis().SetRange(zz-4, zz+4)
+    # hist_3d.ratio._ptr.GetZaxis().SetRange(zmin, zmax)
+    out_side = hist_3d.ratio._ptr.Project3D("yx")
+    out_side.Draw("colz")
+    out_side_cnvs.Draw()
+    out_side_cnvs.SaveAs("OUTSIDEz0.png")
+    hist_3d.ratio._ptr.GetZaxis().SetRange()
+
+
     qout = hist_3d.ratio._ptr.ProjectionX("qout", ymin, ymax-1, zmin, zmax-1)
     qout.SetStats(False)
+    qout.Rebin(2)
+    qout.Scale(1.0/2.0)
     qout.SetTitle("Q_{out};; CF(q_{out})")
     best_fit_X = hist_3d.ratio._axes[0].data[xmin:xmax]
     best_fit_Y = hist_3d.ratio._axes[1].data[ymin:ymax]
@@ -335,6 +354,8 @@ for analysis in femtolist:
     qside = hist_3d.ratio._ptr.ProjectionY("qside", xmin, xmax-1, zmin, zmax-1)
     qside.SetStats(False)
     qside.SetTitle("Q_{side};; CF(q_{side})")
+    qside.Rebin(2)
+    qside.Scale(1.0/2.0)
 
     qs_graph = ROOT.TGraph(len(qs_Y), qs_X, qs_Y)
     qs_graph.SetLineColor(2)
@@ -363,6 +384,7 @@ for analysis in femtolist:
         p[1].Draw("same")
 
     output_canvas.Draw()
+    output_canvas.SaveAs(analysis_name + "_q3d.png")
     # output_image = ROOT.TImage.Create()
     # output_image.FromPad(output_canvas)
     # output_image.WriteImage(analysis_name + "_q3d.png")
