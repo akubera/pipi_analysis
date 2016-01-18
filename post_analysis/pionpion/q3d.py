@@ -93,13 +93,11 @@ class Q3D:
 
         num_slice = self.num[x_slice, y_slice, z_slice]
         den_slice = self.den[x_slice, y_slice, z_slice]
-
+        self.get_projection()
         data = num_slice / den_slice
         # print("Sliced data", data.shape)
         # print(data)
         sum = data.sum(axis=(1, 2))
-        # print("Sum: ", sum.shape)
-        # print(sum)
         return sum
 
     def projection_side(self, x_domain=(-0.1, 0.1), z_domain=(-0.1, 0.1)):
@@ -116,21 +114,25 @@ class Q3D:
         sum = data.sum(axis=(0, 2))
         return sum
 
-    def get_projection(self, x_slice, y_slice, z_slice):
+    def get_projection(self, x_slice, y_slice, z_slice, summed_axes):
         """
         Returns a numpy array
         """
         data = self.data[x_slice, y_slice, z_slice]
-
-        sum = data.sum(axis=(1, 2))
-
-        q = np.abs(self._axis_data[1]) < 0.034
-        print(q)
-        print(self.data[:, q, :])
-        data = self.data[x_slice, y_slice, z_slice]
-        # print("Sliced data", data.shape)
-        # print(data)
-        sum = data.sum(axis=(1, 2))
-        # print("Sum: ", sum.shape)
-        # print(sum)
+        sum = data.sum(axis=summed_axes)
         return sum
+
+    def projection_out_side(self, long_slice):
+        # 2d projection x: out, y: side
+        data = self.ratio.project_2d(0, 1, long_slice)
+        return data
+
+    def projection_out_long(self, side_slice):
+        # 2d projection x: out, y: long
+        data = self.ratio.project_2d(0, 2, long_slice)
+        return data
+
+    def projection_side_long(self, out_slice):
+        # 2d projection x: side, y: long
+        data = self.ratio.project_2d(1, 2, out_slice)
+        return data
