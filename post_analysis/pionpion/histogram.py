@@ -26,6 +26,28 @@ class Histogram:
         pass
 
     @classmethod
+    def BuildFromData(cls, data, errors=None):
+        self = cls()
+        self.data = root_numpy.hist2array(self._ptr, include_overflow=True)
+        # add two overflow bins
+        # error_shape = np.array(list(self.data.shape)) + [2, 2, 2]
+        error_shape = self.data.shape
+        errors = root_numpy.array(self._ptr.GetSumw2())
+        self.error = np.sqrt(errors).reshape(error_shape)
+        # print(">>", self.error[4, 4, 4])
+        # print(">>", hist.GetBinError(4, 4, 4))
+        self._axes = (hist.GetXaxis(), hist.GetYaxis(), hist.GetZaxis())
+        self._axes = Histogram.Axis.BuildFromHist(hist)
+        self._axis_data = np.array(list(
+            [axis.GetBinCenter(i) for i in range(1, axis.GetNbins() + 1)]
+            for axis in self._axes
+        ))
+        assert self.data.shape == tuple(a.data.shape[0] for a in self._axes)
+        self.mask = Histogram.Mask(self)
+        return self
+
+
+    @classmethod
     def BuildFromRootHist(cls, hist):
         self = cls()
         self._ptr = hist
