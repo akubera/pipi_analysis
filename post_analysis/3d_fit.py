@@ -19,6 +19,7 @@ from pionpion.fit import (
     fitfunc_qinv,
     fitfunc_3d,
 )
+from pprint import pprint
 
 import matplotlib as ml
 import matplotlib.pyplot as plt
@@ -164,7 +165,7 @@ def do_qinv_analysis(num, den, cf_title="CF; q (GeV); CF(q)", output_imagename='
 
     canvas_qinv = gen_canvas()
     # canvas_qinv.cd(1)
-    ratio.GetXaxis().SetRangeUser(0.0, 0.2)
+    ratio.GetXaxis().SetRangeUser(0.0, 0.5)
     ratio.Draw()
 
     fit_plot = TGraph(len(FIT_X), FIT_X, FIT_Y)
@@ -220,6 +221,18 @@ for analysis in femtolist:
         do_qinv_analysis(num, den, cf_title=qinv_title, output_imagename=analysis_name + '_qinv.png')
 
     #
+    # Fake Qinv - Kt binned
+    #
+    fake_qinv_num = get_root_object(analysis, ["fakeNum_q3D_pip"])
+    fake_qinv_den = get_root_object(analysis, ["FakeDen_q3D_pip"])
+    if fake_qinv_num == None or fake_qinv_den == None:
+        print("Missing fake_qinv", fake_qinv_num, fake_qinv_den)
+    else:
+        print("\n\n")
+        print(" ***** Fake Q_inv Study *****\n")
+        do_qinv_analysis(fake_qinv_num, fake_qinv_den, cf_title="Fake Q_inv", output_imagename=analysis_name + '_fake_qinv.png')
+
+    #
     # Qinv - Kt binned
     #
     kt_qinv = get_root_object(analysis, ["KT_Qinv"])
@@ -250,10 +263,8 @@ for analysis in femtolist:
     q3d_params.add('norm', value=1.0, min=0.0)
 
     hist_3d = Q3D(q3d_num, q3d_den)
+    hist_3d.ratio._ptr.Write()
     out_side = hist_3d.ratio.project_2d(0, 1, (-0.03, 0.03), bounds_x=(0.0, None))
-    print("out_side")
-    print(out_side.shape)
-    print(out_side)
 
     fig = plt.figure(figsize=(6, 3.2))
 
@@ -276,7 +287,7 @@ for analysis in femtolist:
     # domains_ranges = (1, -2), (1, -2), (1, -1)
     slices = hist_3d.num.getslice(*domains_ranges)
     # slices = slice(None), slice(None), slice(None)
-    print('slices:', slices)
+
     t = time.monotonic()
     dom = hist_3d.num.bounded_domain(*slices)
 
@@ -287,9 +298,6 @@ for analysis in femtolist:
     ratio_err = ratio_err[error_mask]
     ratio = hist_3d.ratio_data[slices].flatten()[error_mask]
 
-    print("dom shape:", dom.shape)
-    print("data shape:", ratio.shape)
-    print("error shape:", ratio_err.shape)
     TIMESTART = time.monotonic()
     fit_res = minimize(fitfunc_3d, q3d_params, args=(dom, (ratio, ratio_err)))
     TIME_DELTA = time.monotonic() - TIMESTART
@@ -305,26 +313,31 @@ for analysis in femtolist:
 
     out_side_cnvs = ROOT.TCanvas("out_side")
     zz = hist_3d.ratio._ptr.GetZaxis().FindBin(0.0)
-    hist_3d.ratio._ptr.GetZaxis().SetRange(zz-4, zz+4)
+    zdist = 6
+    hist_3d.ratio._ptr.GetZaxis().SetRange(zz - zdist, zz + zdist)
     # hist_3d.ratio._ptr.GetZaxis().SetRange(zmin, zmax)
     out_side = hist_3d.ratio._ptr.Project3D("yx")
+    out_side.Write()
+    out_side.SetStats(False)
     out_side.Draw("colz")
     out_side_cnvs.Draw()
     out_side_cnvs.SaveAs("OUTSIDEz0.png")
     hist_3d.ratio._ptr.GetZaxis().SetRange()
 
+    do_rebin = False
 
     qout = hist_3d.ratio._ptr.ProjectionX("qout", ymin, ymax-1, zmin, zmax-1)
     qout.SetStats(False)
-    qout.Rebin(2)
-    qout.Scale(1.0/2.0)
+    qout.Write()
+    norm_scale_factor = 1.0 / ((ymax - ymin) * (zmax - zmin)) / fit_res.params['norm']
+    qout.Scale(norm_scale_factor)
+    if do_rebin:
+        qout.Rebin(2)
+        qout.Scale(.5)
     qout.SetTitle("Q_{out};; CF(q_{out})")
     best_fit_X = hist_3d.ratio._axes[0].data[xmin:xmax]
     best_fit_Y = hist_3d.ratio._axes[1].data[ymin:ymax]
     best_fit_Z = hist_3d.ratio._axes[2].data[zmin:zmax]
-    # print('xspace', best_fit_X)
-    # print('yspace', best_fit_Y)
-    # print('zspace', best_fit_Z)
 
     qo_X = np.linspace(-0.6, 0.6, 200)
     qs_X = np.linspace(-0.6, 0.6, 200)
@@ -336,11 +349,14 @@ for analysis in femtolist:
                                   ] for x in qo_X])
     best_fit_qout = np.array([fitfunc_3d(fit_res.params, x)
                               for x in best_fit_Domain])
-    qo_Y = np.sum(best_fit_qout, axis=1)
+    qo_Y = np.sum(best_fit_qout, axis=1) * norm_scale_factor
     assert qo_Y.shape == qo_X.shape
 
     qo_graph = ROOT.TGraph(len(qo_X), qo_X, qo_Y)
     qo_graph.SetLineColor(2)
+
+
+    norm_scale_factor = 1.0 / ((xmax - xmin) * (zmax - zmin)) / fit_res.params['norm']
 
     best_fit_Domain = np.array([[[x, y, z]
                                   for x in best_fit_X
@@ -348,17 +364,25 @@ for analysis in femtolist:
                                   ] for y in qs_X])
     best_fit_qout = np.array([fitfunc_3d(fit_res.params, x)
                               for x in best_fit_Domain])
-    qs_Y = np.sum(best_fit_qout, axis=1)
+    qs_Y = np.sum(best_fit_qout, axis=1) * norm_scale_factor
     assert qs_X.shape == qs_Y.shape
 
     qside = hist_3d.ratio._ptr.ProjectionY("qside", xmin, xmax-1, zmin, zmax-1)
     qside.SetStats(False)
+    qside.Scale(norm_scale_factor)
     qside.SetTitle("Q_{side};; CF(q_{side})")
-    qside.Rebin(2)
-    qside.Scale(1.0/2.0)
+    qside.Write()
+
+    if do_rebin:
+        qside.Rebin(2)
+        qside.Scale(1.0/2.0)
 
     qs_graph = ROOT.TGraph(len(qs_Y), qs_X, qs_Y)
     qs_graph.SetLineColor(2)
+
+
+
+    norm_scale_factor = 1.0 / ((xmax - xmin) * (ymax - ymin)) / fit_res.params['norm']
 
     best_fit_Domain = np.array([[[x, y, z]
                                   for x in best_fit_X
@@ -366,12 +390,20 @@ for analysis in femtolist:
                                   ] for z in ql_X])
     best_fit_qout = np.array([fitfunc_3d(fit_res.params, x)
                               for x in best_fit_Domain])
-    ql_Y = np.sum(best_fit_qout, axis=1)
+    ql_Y = np.sum(best_fit_qout, axis=1) * norm_scale_factor
     assert ql_X.shape == ql_Y.shape
+
+
 
     qlong = hist_3d.ratio._ptr.ProjectionZ("qlong", xmin, xmax-1, ymin, ymax-1)
     qlong.SetStats(False)
     qlong.SetTitle("Q_{long};; CF(q_{long})")
+    qlong.Scale(norm_scale_factor)
+    qlong.Write()
+
+    if do_rebin:
+        qlong.Rebin(2)
+        qlong.Scale(1.0/2.0)
 
     ql_graph = ROOT.TGraph(len(ql_Y), ql_X, ql_Y)
     ql_graph.SetLineColor(2)
