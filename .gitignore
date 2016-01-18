@@ -8,6 +8,7 @@
 *.o
 *.txt
 *.py[co]
+*.png
 
 !scripts/*.sh
 
