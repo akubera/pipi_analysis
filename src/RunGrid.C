@@ -10,7 +10,7 @@ bool is_mc_analysis = false;
 
 
 TString grid_output_dir = "output";
-TString grid_working_dir = "work_pipi/2016-01-08";
+TString grid_working_dir = "work_pipi/15o/2016-01-19/m00.0";
 
 TString runmode =
   "full";
@@ -54,23 +54,30 @@ std::vector<int>* gBitmap;
 TString macro_config = ""
 "~do_avg_sep_cf = true; "
 "@min_coll_size = 40; "
-"$pion_1_max_impact_z = 0.5; "
-"$pion_1_max_impact_xy = 0.4; "
-"$pion_1_max_tpc_chi_ndof = 0.024; "
-"$pion_1_max_its_chi_ndof = 0.024;";
+"$pion_1_max_impact_z = 0.25; "
+"$pion_1_max_impact_xy = 0.2; "
+"$pion_1_max_tpc_chi_ndof = 0.0234; "
+"$pion_1_max_its_chi_ndof = 0.0234;";
 
 TString output_filename = "PiPi_Analysis_Results.root";
 TString xml_filename =
-//  "";
-  "/alice/cern.ch/user/a/akubera/xml/"
-  "m00";
+ "";
+  // "/alice/cern.ch/user/a/akubera/xml/"
+    // "15o.m00.xml";
+    // "m00";
 
-int use_runs[] = {170163, 0};
+int use_runs[] = // {170163, 0};
 //int use_runs[] = {170593, 170572, 170388, 170387, 0};
 //int use_runs[] = {170593, 170572, 170388, 170387, 170315, 170313, 170312, 0};
 //int use_runs[]   = {170593, 170572, 170388, 170387, 170315, 170313, 170312, 170311, 170309, 170308, 170306, 0};
 // int use_runs[]= {170593, 170572, 170388, 170387, 170315, 170313, 170312, 170311, 170309, 170308, 170306, 170270, 170269, 170268, 170230, 170228, 170207, 170204, 170203, 170193, 170163, 0};
 //  int good_runs[21]={170593, 170572, 170388, 170387, 170315, 170313, 170312, 170311, 170309, 170308, 170306, 170270, 170269, 170268, 170230, 170228, 170207, 170204, 170203, 170193, 170163};
+/*
+{ 246994, 246991, 246989, 246984, 246982, 246980, 246949, 246948, 246945,
+  246942, 246937, 246930, 246928, 246871, 246870, 246867, 246865, 246864,
+  246859, 246858, 246855, 246851, 246847, 0 };
+*/
+ { 245145, 0 };
 
 void
 RunGrid()
@@ -90,19 +97,19 @@ RunGrid()
   alienHandler->SetOverwriteMode();
   alienHandler->SetRunMode(runmode);
   alienHandler->SetAPIVersion("V1.1x");
-  alienHandler->SetAliPhysicsVersion("vAN-20160108-1");
+  alienHandler->SetAliPhysicsVersion("vAN-20160119-1");
   alienHandler->SetRunPrefix("000");
   alienHandler->SetDropToShell(kFALSE);
 
   alienHandler->AddIncludePath("$ALICE_PHYSICS/include");
 
-  if (xml_filename) {
+  if (xml_filename != "") {
     cout << "Adding data file: " << xml_filename << "\n";
     alienHandler->AddDataFile(xml_filename);
     alienHandler->SetNrunsPerMaster(30);
 
   } else {
-
+    cout << "Using secified runs.\n";
     // No XML file or runs specified
     int i = 0;
     while (use_runs[i]) {
@@ -119,9 +126,14 @@ RunGrid()
 
 //  alienHandler->SetAdditionalLibs("ConfigFemtoAnalysis.C");
 
+  // 2011
+  // alienHandler->SetGridDataDir("/alice/data/2011/LHC11h_2");
+  // alienHandler->SetDataPattern("*ESDs/pass2/AOD145/*/AliAOD.root");
 
-  alienHandler->SetGridDataDir("/alice/data/2011/LHC11h_2");
-  alienHandler->SetDataPattern("*ESDs/pass2/AOD145/*/AliAOD.root");
+  // 2015
+  alienHandler->SetGridDataDir("/alice/data/2015/LHC15o");
+  alienHandler->SetDataPattern("*pass1/AOD/*/AliAOD.root");
+
 
   alienHandler->SetGridWorkingDir(grid_working_dir);
   alienHandler->SetGridOutputDir(grid_output_dir);
@@ -158,6 +170,13 @@ RunGrid()
   mgr->AddTask(pipitask);
 
   CreateContainer(mgr, pipitask);
+  pipitask->SelectCollisionCandidates(
+    // AliVEvent::kMB
+    // AliVEvent::kCentral
+    // | AliVEvent::kSemiCentral
+    // AliVEvent::kAny
+    AliVEvent::kINT7
+  );
 
   // pilamtask->SelectCollisionCandidates(AliVEvent::kMB | AliVEvent::kCentral | AliVEvent::kSemiCentral);
 
