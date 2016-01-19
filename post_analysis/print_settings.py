@@ -26,7 +26,6 @@ def recursive_print(obj, depth=0):
             print(prefix, k, v)
 
 for analysis in Femtolist(args.filename):
-    print()
-    print("\n■", analysis.GetName())
+    print("\n\n■", analysis.GetName())
     pprint(analysis.metadata)
     # recursive_print(analysis.metadata)
