@@ -4,7 +4,7 @@
 
 from .root_helpers import get_root_object
 from .analysis import Analysis
-
+import ROOT
 
 class Femtolist:
     """
@@ -18,6 +18,9 @@ class Femtolist:
     ]
 
     def __init__(self, file):
+        if isinstance(file, str):
+            file = ROOT.TFile(file, "READ")
+
         femtolist = get_root_object(file, self.FEMTOLIST_PATHS)
         if femtolist == None:
             raise ValueError("Could not find a femtolist in %r" % (file))
