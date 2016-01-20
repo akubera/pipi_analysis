@@ -49,16 +49,22 @@ TString output_filename = "",
 // const TString config = "\"\"";
 TString config = "\""
 "+p;"
+// "{1,20};"
+
 // "~do_avg_sep_cf = true; "
 "~do_deltaeta_deltaphi_cf = true;"
 "@enable_pair_monitors = false;"
 "@verbose = false; "
 "@min_coll_size = 1; "
-"@mult_min = 2000; "
+// "@mult_min = 2000; "
+// "$event_MultMin = 2000; "
+
+"$pion_1_PtMin = 0.14; "
+"$pion_1_PtMax = 2.0; "
 "$pion_1_max_impact_z = 0.15; "
 "$pion_1_max_impact_xy = 0.2; "
-"$pion_1_max_tpc_chi_ndof = 0.025; "
-"$pion_1_max_its_chi_ndof = 0.025; "
+"$pion_1_max_tpc_chi_ndof = 3.0; "
+"$pion_1_max_its_chi_ndof = 3.0; "
 "$pair_delta_eta_min = 0.00; "
 "$pair_delta_phi_min = 0.00; "
 
