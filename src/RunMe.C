@@ -52,14 +52,15 @@ TString config = "\""
 // "~do_avg_sep_cf = true; "
 "~do_deltaeta_deltaphi_cf = true;"
 "@enable_pair_monitors = false;"
-"@verbose = true; "
-"@min_coll_size = 40; "
+"@verbose = false; "
+"@min_coll_size = 1; "
+"@mult_min = 2000; "
 "$pion_1_max_impact_z = 0.15; "
 "$pion_1_max_impact_xy = 0.2; "
 "$pion_1_max_tpc_chi_ndof = 0.025; "
 "$pion_1_max_its_chi_ndof = 0.025; "
-// "$pair_delta_eta_min = 0.02; "
-// "$pair_delta_phi_min = 0.04; "
+"$pair_delta_eta_min = 0.00; "
+"$pair_delta_phi_min = 0.00; "
 
 "\"";
 
@@ -155,7 +156,9 @@ RunMe()
 
   mgr->PrintStatus();
 
-  TChain *input_files = load_files(new TChain("aodTree"));
+  TChain *input_files =
+    load_file_set();
+    //load_files(new TChain("aodTree"));
 
   mgr->StartAnalysis("local", input_files);
 
@@ -232,26 +235,24 @@ load_files(TChain *input_files = NULL)
 
        // group 1
        input_files->Add("/alice/data/2015/LHC15o/000245145/pass1/AOD/001/AliAOD.root");
-      //  input_files->Add("/alice/data/2015/LHC15o/000245145/pass1/AOD/006/AliAOD.root");
       //  input_files->Add("/alice/data/2015/LHC15o/000245145/pass1/AOD/002/AliAOD.root");
-      //  input_files->Add("/alice/data/2015/LHC15o/000245145/pass1/AOD/008/AliAOD.root");
-//        input_files->Add("/alice/data/2015/LHC15o/000245145/pass1/AOD/005/AliAOD.root");
+      //  input_files->Add("/alice/data/2015/LHC15o/000245145/pass1/AOD/003/AliAOD.root");
+      //  input_files->Add("/alice/data/2015/LHC15o/000245145/pass1/AOD/004/AliAOD.root");
+      //  input_files->Add("/alice/data/2015/LHC15o/000245145/pass1/AOD/005/AliAOD.root");
+      //  input_files->Add("/alice/data/2015/LHC15o/000245145/pass1/AOD/006/AliAOD.root");
+      //  input_files->Add("/alice/data/2015/LHC15o/000245145/pass1/AOD/007/AliAOD.root");
 
        // group 2
-//        input_files->Add("/alice/data/2015/LHC15o/000245145/pass1/AOD/007/AliAOD.root");
-//        input_files->Add("/alice/data/2015/LHC15o/000245145/pass1/AOD/004/AliAOD.root");
-//        input_files->Add("/alice/data/2015/LHC15o/000245145/pass1/AOD/010/AliAOD.root");
-//        input_files->Add("/alice/data/2015/LHC15o/000245145/pass1/AOD/009/AliAOD.root");
-//        input_files->Add("/alice/data/2015/LHC15o/000245145/pass1/AOD/003/AliAOD.root");
+      //  input_files->Add("/alice/data/2015/LHC15o/000245145/pass1/AOD/008/AliAOD.root");
+      //  input_files->Add("/alice/data/2015/LHC15o/000245145/pass1/AOD/010/AliAOD.root");
+      //  input_files->Add("/alice/data/2015/LHC15o/000245145/pass1/AOD/009/AliAOD.root");
+      //  input_files->Add("/alice/data/2015/LHC15o/000245145/pass1/AOD/011/AliAOD.root");
+      //  input_files->Add("/alice/data/2015/LHC15o/000245145/pass1/AOD/012/AliAOD.root");
+      //  input_files->Add("/alice/data/2015/LHC15o/000245145/pass1/AOD/013/AliAOD.root");
+      //  input_files->Add("/alice/data/2015/LHC15o/000245145/pass1/AOD/014/AliAOD.root");
 
         // group 3
-//        input_files->Add("/alice/data/2015/LHC15o/000245145/pass1/AOD/011/AliAOD.root");
-//        input_files->Add("/alice/data/2015/LHC15o/000245145/pass1/AOD/012/AliAOD.root");
-//        input_files->Add("/alice/data/2015/LHC15o/000245145/pass1/AOD/013/AliAOD.root");
-//        input_files->Add("/alice/data/2015/LHC15o/000245145/pass1/AOD/014/AliAOD.root");
-//        input_files->Add("/alice/data/2015/LHC15o/000245145/pass1/AOD/015/AliAOD.root");
-
-        // group 4
+      //  input_files->Add("/alice/data/2015/LHC15o/000245145/pass1/AOD/015/AliAOD.root");
       //  input_files->Add("/alice/data/2015/LHC15o/000245145/pass1/AOD/016/AliAOD.root");
       //  input_files->Add("/alice/data/2015/LHC15o/000245145/pass1/AOD/017/AliAOD.root");
       //  input_files->Add("/alice/data/2015/LHC15o/000245145/pass1/AOD/018/AliAOD.root");
@@ -259,5 +260,34 @@ load_files(TChain *input_files = NULL)
       //  input_files->Add("/alice/data/2015/LHC15o/000245145/pass1/AOD/020/AliAOD.root");
 
     }
+  return input_files;
+}
+
+TChain*
+load_file_set(TChain *input_files = NULL)
+{
+  if (!input_files) {
+    input_files = new TChain("aodTree");
+  }
+
+  char **argv = gApplication->Argv();
+  int argc = gApplication->Argc();
+
+  Int_t id = TString(argv[argc-1]).Atoi();
+  if (id == 0) {
+    cout << "Error, bad id num '" << argv[argc-1] << "'. Aborting.\n";
+    exit(1);
+  }
+
+  const char fmt[] = "/alice/data/2015/LHC15o/000245145/pass1/AOD/%03d/AliAOD.root";
+  int start = 5 * (id - 1) + 1,
+       stop = 5 * id + 1;
+
+  cout << "ID: " << id << "  " << start << " -- " << stop << "\n";
+  for (int i = start; i < stop; ++i) {
+    cout << TString::Format(fmt, i) << "\n";
+    input_files->Add(TString::Format(fmt, i));
+  }
+
   return input_files;
 }
