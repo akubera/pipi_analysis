@@ -8,7 +8,10 @@
 *.o
 *.txt
 *.py[co]
+
 *.png
+*.pdf
+*.eps
 
 !scripts/*.sh
 
