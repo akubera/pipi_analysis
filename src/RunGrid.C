@@ -14,7 +14,7 @@ TDatime date;
 
 TString grid_output_dir = "output";
 TString grid_working_dir = "work_pipi";
-TString subdir = "mult_selection.CL0";
+TString subdir = "kCentrality";
 
 TString runmode =
   // "full";
@@ -118,7 +118,7 @@ RunGrid()
   alienHandler->SetOverwriteMode();
   alienHandler->SetRunMode(runmode);
   alienHandler->SetAPIVersion("V1.1x");
-  alienHandler->SetAliPhysicsVersion("vAN-20160119-1");
+  alienHandler->SetAliPhysicsVersion("vAN-20160122-1");
   alienHandler->SetRunPrefix("000");
   alienHandler->SetDropToShell(kFALSE);
 
