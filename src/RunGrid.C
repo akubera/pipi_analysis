@@ -8,13 +8,17 @@ bool rungrid = false;
 bool force_exit = false;
 bool is_mc_analysis = false;
 
+bool is_2015_data = true;
+
+TDatime date;
 
 TString grid_output_dir = "output";
-TString grid_working_dir = "work_pipi/15o/2016-01-19/m00.0";
+TString grid_working_dir = "work_pipi";
+TString subdir = "mult_selection.CL0";
 
 TString runmode =
-  "full";
-  //  "terminate";
+  // "full";
+   "terminate";
 
 
 #define DEV_LOCAL
@@ -52,12 +56,26 @@ std::set<int> runs;
 std::vector<int>* gBitmap;
 
 TString macro_config = ""
-"~do_avg_sep_cf = true; "
-"@min_coll_size = 40; "
-"$pion_1_max_impact_z = 0.25; "
+"+p; "
+"{0:50}; "
+
+"~do_avg_sep_cf = false; "
+"~do_deltaeta_deltaphi_cf = false; "
+// "@verbose = true; "
+
+"@enable_pair_monitors = false;"
+"@min_coll_size = 1; "
+
+"$event_VertexZMin = -8; "
+"$event_VertexZMax = 8; "
+
+"$pion_1_PtMin = 0.14; "
+"$pion_1_PtMax = 2.0; "
+"$pion_1_max_impact_z = 0.15; "
 "$pion_1_max_impact_xy = 0.2; "
-"$pion_1_max_tpc_chi_ndof = 0.0234; "
-"$pion_1_max_its_chi_ndof = 0.0234;";
+"$pion_1_max_tpc_chi_ndof = 0.010; "
+"$pion_1_max_its_chi_ndof = 0.010;"
+;
 
 TString output_filename = "PiPi_Analysis_Results.root";
 TString xml_filename =
@@ -77,7 +95,7 @@ int use_runs[] = // {170163, 0};
   246942, 246937, 246930, 246928, 246871, 246870, 246867, 246865, 246864,
   246859, 246858, 246855, 246851, 246847, 0 };
 */
- { 245145, 0 };
+ { 244918, 0 };
 
 void
 RunGrid()
@@ -93,6 +111,9 @@ RunGrid()
     cerr << "Error. Could not create Alien Handler. Exiting.\n";
     exit(1);
   }
+
+  grid_working_dir += (is_2015_data) ? "/15o" : "/11h";
+  grid_working_dir += TString::Format("/2016-%02d-%02d/%s", date.GetMonth(), date.GetDay(), subdir.Data());
 
   alienHandler->SetOverwriteMode();
   alienHandler->SetRunMode(runmode);
@@ -124,16 +145,17 @@ RunGrid()
     }
   }
 
-//  alienHandler->SetAdditionalLibs("ConfigFemtoAnalysis.C");
+ alienHandler->SetAdditionalLibs("ConfigFemtoAnalysis.C");
 
-  // 2011
-  // alienHandler->SetGridDataDir("/alice/data/2011/LHC11h_2");
-  // alienHandler->SetDataPattern("*ESDs/pass2/AOD145/*/AliAOD.root");
-
-  // 2015
-  alienHandler->SetGridDataDir("/alice/data/2015/LHC15o");
-  alienHandler->SetDataPattern("*pass1/AOD/*/AliAOD.root");
-
+  if (is_2015_data) {
+    // 2015
+    alienHandler->SetGridDataDir("/alice/data/2015/LHC15o");
+    alienHandler->SetDataPattern("*pass1/AOD/*/AliAOD.root");
+  } else {
+    // 2011
+    alienHandler->SetGridDataDir("/alice/data/2011/LHC11h_2");
+    alienHandler->SetDataPattern("*ESDs/pass2/AOD145/*/AliAOD.root");
+  }
 
   alienHandler->SetGridWorkingDir(grid_working_dir);
   alienHandler->SetGridOutputDir(grid_output_dir);
@@ -152,6 +174,15 @@ RunGrid()
   AliInputEventHandler *input_handler = new AliAODInputHandler();
   mgr->SetInputEventHandler(input_handler);
 
+
+  const Int_t collision_trigger = AliVEvent::kINT7;
+
+
+  gROOT->LoadMacro("$ALICE_PHYSICS/OADB/COMMON/MULTIPLICITY/macros/AddTaskMultSelection.C");
+  AddTaskMultSelection()->SetSelectedTriggerClass(collision_trigger);
+  // AliMultSelectionTask *mult_task = AddTaskMultSelection(kFALSE);
+  // mult_task->SetSelectedTriggerClass(collision_trigger);
+
   gROOT->LoadMacro("$ALICE_ROOT/ANALYSIS/macros/AddTaskPIDResponse.C");
   AddTaskPIDResponse(is_mc_analysis);
 
@@ -161,8 +192,8 @@ RunGrid()
   // Create the AliFemto task using configuration from ConfigFemtoAnalysis.C
   AliAnalysisTaskFemto *pipitask = new AliAnalysisTaskFemto(
     "PiPiTask",
-    "$ALICE_PHYSICS/PWGCF/FEMTOSCOPY/macros/Train/PionPionFemto/ConfigFemtoAnalysis.C",
-//    "ConfigFemtoAnalysis.C",
+    // "$ALICE_PHYSICS/PWGCF/FEMTOSCOPY/macros/Train/PionPionFemto/ConfigFemtoAnalysis.C",
+   "ConfigFemtoAnalysis.C",
     "\"" + macro_config + "\"",
     kFALSE
   );
@@ -170,16 +201,8 @@ RunGrid()
   mgr->AddTask(pipitask);
 
   CreateContainer(mgr, pipitask);
-  pipitask->SelectCollisionCandidates(
-    // AliVEvent::kMB
-    // AliVEvent::kCentral
-    // | AliVEvent::kSemiCentral
-    // AliVEvent::kAny
-    AliVEvent::kINT7
-  );
 
-  // pilamtask->SelectCollisionCandidates(AliVEvent::kMB | AliVEvent::kCentral | AliVEvent::kSemiCentral);
-
+  pipitask->SelectCollisionCandidates(collision_trigger);
 
   if (!mgr->InitAnalysis()) {
     cerr << "Error Initting Analysis. Exiting.\n";
@@ -189,7 +212,7 @@ RunGrid()
   mgr->PrintStatus();
   mgr->StartAnalysis("grid");
 
-  cout << "Done.";
+  cout << "Done." << std::endl;
 }
 
 
