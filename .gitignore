@@ -9,6 +9,10 @@
 *.txt
 *.py[co]
 
+*.png
+*.pdf
+*.eps
+
 !scripts/*.sh
 
 /ConfigMultiAnalysis.C

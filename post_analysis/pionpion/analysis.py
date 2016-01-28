@@ -11,12 +11,17 @@ from ROOT import (
 
 
 class Analysis:
+    """
+    Analysis object wrapping a TObjArray full of various femtoscopic
+    information.
+    """
 
     def __init__(self, analysis_obj):
         if not isinstance(analysis_obj, TObjArray):
             raise ValueError("Analysis expected TObjArray initialization value. Found %r" % (analysis_obj))
 
         self._data = analysis_obj
+        self.metadata = Analysis.load_metadata(self._data.Last())
 
     def __getattr__(self, name):
         """
