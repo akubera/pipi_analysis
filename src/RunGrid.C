@@ -6,9 +6,7 @@
 
 bool rungrid = false;
 bool force_exit = false;
-bool is_mc_analysis = false;
 
-bool is_2015_data = true;
 
 TDatime date;
 
@@ -17,8 +15,8 @@ TString grid_working_dir = "work_pipi";
 TString subdir = "kCentrality";
 
 TString runmode =
-  // "full";
-   "terminate";
+  "full";
+  //  "terminate";
 
 
 #define DEV_LOCAL
@@ -55,27 +53,12 @@ void process_arguments();
 std::set<int> runs;
 std::vector<int>* gBitmap;
 
-TString macro_config = ""
-"+p; "
-"{0:50}; "
 
-"~do_avg_sep_cf = false; "
-"~do_deltaeta_deltaphi_cf = false; "
-// "@verbose = true; "
-
-"@enable_pair_monitors = false;"
-"@min_coll_size = 1; "
-
-"$event_VertexZMin = -8; "
-"$event_VertexZMax = 8; "
-
-"$pion_1_PtMin = 0.14; "
-"$pion_1_PtMax = 2.0; "
-"$pion_1_max_impact_z = 0.15; "
-"$pion_1_max_impact_xy = 0.2; "
-"$pion_1_max_tpc_chi_ndof = 0.010; "
-"$pion_1_max_its_chi_ndof = 0.010;"
-;
+// Global Configuration - set by CommonConfig.C
+bool is_mc_analysis;
+bool is_2015_data;
+TString macro_config;
+Int_t collision_trigger;
 
 TString output_filename = "PiPi_Analysis_Results.root";
 TString xml_filename =
@@ -102,7 +85,6 @@ RunGrid()
 {
   cout << "[RunMe] Begin\n";
   cout << "        XML : " << xml_filename << "\n";
-  bool is_mc_analysis = kFALSE;
 
   AliAnalysisManager *mgr = new AliAnalysisManager("mgr", "PiPi Manager");
 
@@ -112,13 +94,17 @@ RunGrid()
     exit(1);
   }
 
+  // get configuration from macro
+  gROOT->LoadMacro("src/CommonConfig.C");
+  CommonConfig();
+
   grid_working_dir += (is_2015_data) ? "/15o" : "/11h";
   grid_working_dir += TString::Format("/2016-%02d-%02d/%s", date.GetMonth(), date.GetDay(), subdir.Data());
 
   alienHandler->SetOverwriteMode();
   alienHandler->SetRunMode(runmode);
   alienHandler->SetAPIVersion("V1.1x");
-  alienHandler->SetAliPhysicsVersion("vAN-20160122-1");
+  alienHandler->SetAliPhysicsVersion("vAN-20160128-1");
   alienHandler->SetRunPrefix("000");
   alienHandler->SetDropToShell(kFALSE);
 
@@ -145,7 +131,7 @@ RunGrid()
     }
   }
 
- alienHandler->SetAdditionalLibs("ConfigFemtoAnalysis.C");
+  alienHandler->SetAdditionalLibs("ConfigFemtoAnalysis.C");
 
   if (is_2015_data) {
     // 2015
@@ -166,16 +152,13 @@ RunGrid()
 
   alienHandler->SetMaxMergeFiles(30);
   alienHandler->SetMaxMergeStages(3);
-  alienHandler->SetSplitMaxInputFileNumber(40);
+  alienHandler->SetSplitMaxInputFileNumber(10);
 
   mgr->SetGridHandler(alienHandler);
 
   // Create AOD input event handler
   AliInputEventHandler *input_handler = new AliAODInputHandler();
   mgr->SetInputEventHandler(input_handler);
-
-
-  const Int_t collision_trigger = AliVEvent::kINT7;
 
 
   gROOT->LoadMacro("$ALICE_PHYSICS/OADB/COMMON/MULTIPLICITY/macros/AddTaskMultSelection.C");
@@ -194,7 +177,7 @@ RunGrid()
     "PiPiTask",
     // "$ALICE_PHYSICS/PWGCF/FEMTOSCOPY/macros/Train/PionPionFemto/ConfigFemtoAnalysis.C",
    "ConfigFemtoAnalysis.C",
-    "\"" + macro_config + "\"",
+    macro_config,
     kFALSE
   );
 
