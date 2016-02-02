@@ -7,6 +7,7 @@
 bool rungrid = false;
 bool force_exit = false;
 
+bool use_local_config = false;
 
 TDatime date;
 
@@ -60,6 +61,8 @@ bool is_2015_data;
 TString macro_config;
 Int_t collision_trigger;
 
+TString aliphysics_version = "vAN-20160203-1";
+
 TString output_filename = "PiPi_Analysis_Results.root";
 TString xml_filename =
  "";
@@ -104,7 +107,7 @@ RunGrid()
   alienHandler->SetOverwriteMode();
   alienHandler->SetRunMode(runmode);
   alienHandler->SetAPIVersion("V1.1x");
-  alienHandler->SetAliPhysicsVersion("vAN-20160128-1");
+  alienHandler->SetAliPhysicsVersion(aliphysics_version);
   alienHandler->SetRunPrefix("000");
   alienHandler->SetDropToShell(kFALSE);
 
@@ -131,12 +134,15 @@ RunGrid()
     }
   }
 
-  alienHandler->SetAdditionalLibs("ConfigFemtoAnalysis.C");
+  if (use_local_config) {
+    alienHandler->SetAdditionalLibs("ConfigFemtoAnalysis.C");
+  }
 
   if (is_2015_data) {
     // 2015
     alienHandler->SetGridDataDir("/alice/data/2015/LHC15o");
-    alienHandler->SetDataPattern("*pass1/AOD/*/AliAOD.root");
+//    alienHandler->SetDataPattern("*pass1/AOD/*/AliAOD.root");
+    alienHandler->SetDataPattern("*/pass_lowint_firstphys/AOD/*/AliAOD.root");
   } else {
     // 2011
     alienHandler->SetGridDataDir("/alice/data/2011/LHC11h_2");
@@ -172,11 +178,15 @@ RunGrid()
   // gROOT->LoadMacro("$ALICE_ROOT/ANALYSIS/macros/AddTaskVZEROEPSelection.C");
   // AddTaskVZEROEPSelection();
 
+  TString macro_filename = (use_local_config)
+                         ? "configFemtoAnalysis.C"
+                         : "$ALICE_PHYSICS/PWGCF/FEMTOSCOPY/macros/Train/PionPionFemto/ConfigFemtoAnalysis.C";
+
+
   // Create the AliFemto task using configuration from ConfigFemtoAnalysis.C
   AliAnalysisTaskFemto *pipitask = new AliAnalysisTaskFemto(
     "PiPiTask",
-    // "$ALICE_PHYSICS/PWGCF/FEMTOSCOPY/macros/Train/PionPionFemto/ConfigFemtoAnalysis.C",
-   "ConfigFemtoAnalysis.C",
+    macro_filename,
     macro_config,
     kFALSE
   );

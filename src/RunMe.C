@@ -43,18 +43,20 @@ std::set<int> runs;
 std::vector<int>* gBitmap;
 
 TString output_filename = "",
-         macro_filename = "$ALICE_PHYSICS/PWGCF/FEMTOSCOPY/macros/Train/PionPionFemto/ConfigFemtoAnalysis.C";
+         macro_filename =
+           "$ALICE_PHYSICS/PWGCF/FEMTOSCOPY/macros/Train/PionPionFemto/ConfigFemtoAnalysis.C";
+        //  "ConfigFemtoAnalysis.C";
 
 // const TString config = "\"@vertex_bins = 5;{0:5, 0:10:20:30}; +p; +m; ~do_kt_qinv = true;\"";
 // const TString config = "\"\"";
 TString config = "\""
 "+p;"
-// "{1,20};"
+"{0:20};"
 
 // "~do_avg_sep_cf = true; "
 "~do_deltaeta_deltaphi_cf = true;"
 "@enable_pair_monitors = false;"
-"@verbose = false; "
+// "@verbose = true; "
 "@min_coll_size = 1; "
 // "@mult_min = 2000; "
 // "$event_MultMin = 2000; "
@@ -63,8 +65,8 @@ TString config = "\""
 "$pion_1_PtMax = 2.0; "
 "$pion_1_max_impact_z = 0.15; "
 "$pion_1_max_impact_xy = 0.2; "
-"$pion_1_max_tpc_chi_ndof = 3.0; "
-"$pion_1_max_its_chi_ndof = 3.0; "
+"$pion_1_max_tpc_chi_ndof = 0.013; "
+"$pion_1_max_its_chi_ndof = 0.013; "
 "$pair_delta_eta_min = 0.00; "
 "$pair_delta_phi_min = 0.00; "
 
@@ -110,8 +112,15 @@ RunMe()
   input_handler->CreatePIDResponse(is_mc_analysis);
   mgr->SetInputEventHandler(input_handler);
 
+  const Int_t collision_trigger = AliVEvent::kINT7;
+
   gROOT->LoadMacro("$ALICE_ROOT/ANALYSIS/macros/AddTaskPIDResponse.C");
   AddTaskPIDResponse(is_mc_analysis);
+
+  gROOT->LoadMacro("$ALICE_PHYSICS/OADB/COMMON/MULTIPLICITY/macros/AddTaskMultSelection.C");
+  AliMultSelectionTask *mult_task = AddTaskMultSelection();
+  mult_task->SetSelectedTriggerClass(collision_trigger);
+  mgr->AddTask(mult_task);
 
   gROOT->LoadMacro("$ALICE_ROOT/ANALYSIS/macros/AddTaskVZEROEPSelection.C");
   AddTaskVZEROEPSelection();
@@ -124,14 +133,7 @@ RunMe()
     kFALSE
   );
 
-  pipitask->SelectCollisionCandidates(
-    // AliVEvent::kMB
-    // AliVEvent::kCentral
-    // | AliVEvent::kSemiCentral
-    // | AliVEvent::kAny
-    AliVEvent::kINT7
-  );
-  //  pipitask->SelectCollisionCandidates(AliVEvent::kAny);
+  pipitask->SelectCollisionCandidates(collision_trigger);
 
   if (output_filename == "") {
     TDatime d;
@@ -285,11 +287,13 @@ load_file_set(TChain *input_files = NULL)
     exit(1);
   }
 
-  const char fmt[] = "/alice/data/2015/LHC15o/000245145/pass1/AOD/%03d/AliAOD.root";
-  int start = 5 * (id - 1) + 1,
-       stop = 5 * id + 1;
+  const width = 3;
 
-  cout << "ID: " << id << "  " << start << " -- " << stop << "\n";
+  const char fmt[] = "/alice/data/2015/LHC15o/000244918/pass1/AOD/%03d/AliAOD.root";
+  int start = width * (id - 1) + 1,
+       stop = width * id + 1;
+
+  cout << "ID: " << id << ": " << start << " -- " << stop << "\n";
   for (int i = start; i < stop; ++i) {
     cout << TString::Format(fmt, i) << "\n";
     input_files->Add(TString::Format(fmt, i));

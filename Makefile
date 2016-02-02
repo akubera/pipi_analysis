@@ -13,8 +13,8 @@ ALIROOT = aliroot
 all:
 
 
-run: RunMe.C
-	aliroot -q -x $<
+run: src/RunMe.C
+	aliroot -q -x $< 2
 
 multi_run:
 	for i in {1..8}; do aliroot -q -x src/RunLocal.C $$i & sleep 4; done
