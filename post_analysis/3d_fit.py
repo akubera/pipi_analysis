@@ -123,7 +123,7 @@ def do_qinv_analysis(num, den, cf_title="CF; q (GeV); CF(q)", output_imagename='
     Code performing the qinv analysis - should probably be moved to a submodule
     """
 
-    norm_x_range = 0.8, 1.1
+    norm_x_range = 0.3, 0.5
     num_norm_bin_range = map(num.FindBin, norm_x_range)
     den_norm_bin_range = map(num.FindBin, norm_x_range)
 
@@ -165,7 +165,8 @@ def do_qinv_analysis(num, den, cf_title="CF; q (GeV); CF(q)", output_imagename='
 
     canvas_qinv = gen_canvas()
     # canvas_qinv.cd(1)
-    ratio.GetXaxis().SetRangeUser(0.0, 0.5)
+    ratio.GetXaxis().SetRangeUser(0.0, 0.7)
+    ratio.GetYaxis().SetTitleOffset(1.2)
     ratio.Draw()
 
     fit_plot = TGraph(len(FIT_X), FIT_X, FIT_Y)
@@ -230,7 +231,9 @@ for analysis in femtolist:
     else:
         print("\n\n")
         print(" ***** Fake Q_inv Study *****\n")
-        do_qinv_analysis(fake_qinv_num, fake_qinv_den, cf_title="Fake Q_inv", output_imagename=analysis_name + '_fake_qinv.png')
+        do_qinv_analysis(fake_qinv_num, fake_qinv_den,
+                         cf_title="Fake Q_inv; q_{inv} (fake); C(q_{inv});",
+                         output_imagename=analysis_name + '_fake_qinv.png')
 
     #
     # Qinv - Kt binned
@@ -313,7 +316,7 @@ for analysis in femtolist:
 
     out_side_cnvs = ROOT.TCanvas("out_side")
     zz = hist_3d.ratio._ptr.GetZaxis().FindBin(0.0)
-    zdist = 6
+    zdist = 3
     hist_3d.ratio._ptr.GetZaxis().SetRange(zz - zdist, zz + zdist)
     # hist_3d.ratio._ptr.GetZaxis().SetRange(zmin, zmax)
     out_side = hist_3d.ratio._ptr.Project3D("yx")
@@ -328,13 +331,15 @@ for analysis in femtolist:
 
     qout = hist_3d.ratio._ptr.ProjectionX("qout", ymin, ymax-1, zmin, zmax-1)
     qout.SetStats(False)
+    qout.GetYaxis().SetTitleSize(0.06)
+    qout.GetYaxis().SetTitleOffset(0.6)
     qout.Write()
     norm_scale_factor = 1.0 / ((ymax - ymin) * (zmax - zmin)) / fit_res.params['norm']
     qout.Scale(norm_scale_factor)
     if do_rebin:
         qout.Rebin(2)
         qout.Scale(.5)
-    qout.SetTitle("Q_{out};; CF(q_{out})")
+    qout.SetTitle("q_{out};; CF(q_{out})")
     best_fit_X = hist_3d.ratio._axes[0].data[xmin:xmax]
     best_fit_Y = hist_3d.ratio._axes[1].data[ymin:ymax]
     best_fit_Z = hist_3d.ratio._axes[2].data[zmin:zmax]
@@ -370,7 +375,7 @@ for analysis in femtolist:
     qside = hist_3d.ratio._ptr.ProjectionY("qside", xmin, xmax-1, zmin, zmax-1)
     qside.SetStats(False)
     qside.Scale(norm_scale_factor)
-    qside.SetTitle("Q_{side};; CF(q_{side})")
+    qside.SetTitle("q_{side};; CF(q_{side})")
     qside.Write()
 
     if do_rebin:
@@ -397,7 +402,7 @@ for analysis in femtolist:
 
     qlong = hist_3d.ratio._ptr.ProjectionZ("qlong", xmin, xmax-1, ymin, ymax-1)
     qlong.SetStats(False)
-    qlong.SetTitle("Q_{long};; CF(q_{long})")
+    qlong.SetTitle("q_{long};; CF(q_{long})")
     qlong.Scale(norm_scale_factor)
     qlong.Write()
 
@@ -421,7 +426,9 @@ for analysis in femtolist:
     # output_image.FromPad(output_canvas)
     # output_image.WriteImage(analysis_name + "_q3d.png")
 
-    input()
+    # input()
+
+    ROOT.gApplication.Run()
 
     # ratio.Draw()
     # break
