@@ -28,24 +28,12 @@ class Histogram:
     @classmethod
     def BuildFromData(cls, data, errors=None):
         self = cls()
-        self.data = root_numpy.hist2array(self._ptr, include_overflow=True)
-        # add two overflow bins
-        # error_shape = np.array(list(self.data.shape)) + [2, 2, 2]
-        error_shape = self.data.shape
-        errors = root_numpy.array(self._ptr.GetSumw2())
-        self.error = np.sqrt(errors).reshape(error_shape)
-        # print(">>", self.error[4, 4, 4])
-        # print(">>", hist.GetBinError(4, 4, 4))
-        self._axes = (hist.GetXaxis(), hist.GetYaxis(), hist.GetZaxis())
-        self._axes = Histogram.Axis.BuildFromHist(hist)
-        self._axis_data = np.array(list(
-            [axis.GetBinCenter(i) for i in range(1, axis.GetNbins() + 1)]
-            for axis in self._axes
-        ))
-        assert self.data.shape == tuple(a.data.shape[0] for a in self._axes)
-        self.mask = Histogram.Mask(self)
+        self.data = data
+        if errors is None:
+            self.error = sqrt(self.data)
+        else:
+            self.error = errors
         return self
-
 
     @classmethod
     def BuildFromRootHist(cls, hist):
@@ -65,7 +53,10 @@ class Histogram:
             [axis.GetBinCenter(i) for i in range(1, axis.GetNbins() + 1)]
             for axis in self._axes
         ))
-        assert self.data.shape == tuple(a.data.shape[0] for a in self._axes)
+        print(self.data.shape)
+        print(tuple(a.data.shape[0] for a in self._axes if not a.unused))
+        assert self.data.shape == tuple(a.data.shape[0]
+                for a in self._axes  if not a.unused)
         self.mask = Histogram.Mask(self)
         return self
 
@@ -185,6 +176,22 @@ class Histogram:
     def project_2d(self, axis_x, axis_y, *axis_ranges, bounds_x=slice(None), bounds_y=slice(None)):
         """
         Project the histogram into 2 dimensions.
+
+        Parameters
+        ----------
+        axis_x : int
+            The histogram axis number to be the x axis of projection
+        axis_y : int
+            The histogram axis number to be the y axis of projection
+        axis_ranges : tuple of histogram slices
+            Slices to apply to each of the 'other' axes in the histogram.
+            These slices are applied in x-y-z order of histogram axes. If
+            there are more axes than bounds, any remaining axes are boundless.
+        bounds_x : histogram slice, optional
+            Option slice to apply to the (new) x-axis
+        bounds_y : histogram slice, optional
+            Option slice to apply to the (new) y-axis
+
         """
         assert axis_x != axis_y
         assert 0 <= axis_x < self.data.ndim
@@ -218,11 +225,17 @@ class Histogram:
     # Math Functions
     #
     def __truediv__(self, rhs):
+        """
+        Divide histogram.
+        If right hand side is a number, this simply scales the histogram.
+        If right hand side is another histogram, this will do bin-by-bin
+        division, adding errors appropriately.
+        """
         if isinstance(rhs, Histogram):
-            quotient = self._ptr.Clone()
-            quotient.Divide(rhs._ptr)
-            q = Histogram.BuildFromRootHist(quotient)
-            return q
+            data = self.data / rhs.data
+            errs = (self.data * self.error + rhs.data * rhs.error) / (self.data + rhs.data)
+            quotient = Histogram.BuildFromData(data, errs)
+            return quotient
         elif isinstance(rhs, float):
             clone = self._ptr.Clone()
             clone.Scale(1.0 / rhs)
@@ -237,6 +250,7 @@ class Histogram:
 
         def __init__(self, root_TAxis):
             self._ptr = root_TAxis
+            self.unused = (self._ptr.GetNbins() == 1)
             if not self._ptr.IsVariableBinSize():
                 maxbin = self._ptr.GetNbins() + 1
                 self.data = np.linspace(self._ptr.GetBinCenter(0),
