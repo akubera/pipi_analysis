@@ -86,7 +86,24 @@ def fitfunc_qinv_lorentz(params, q, data=None):
     return res
 
 
+def fitfunc_qinv_gauss_ll(params, q, data=None):
+    """
+    Calculate the gaussian fit returning log-likelyhood χ² calculation.
+
+    """
+    C = fitfunc_qinv_gauss(params, q)
+    if data is None:
+        return C
+    A, B = data
+    ApB_Cp1 = (A + B) / (C + 1)
+    res = -2 * ( A * np.log(C / A * ApB_Cp1) + B * np.log(ApB_Cp1 / B) )
+    # print(res)
+    # print(1.0/res)
+    # input()
+    return res
+
 fitfunc_qinv = fitfunc_qinv_gauss
+# fitfunc_qinv = fitfunc_qinv_gauss_ll
 # fitfunc_qinv = fitfunc_qinv_lorentz
 
 
