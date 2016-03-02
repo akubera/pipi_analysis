@@ -11,23 +11,24 @@ HBAR_C = 0.1973269788 # GeV·fm
 def fitfunc_qinv_gauss(params, q, data=None):
     """
     fitfunc_qinv_gauss
-    ~~~~~~~~~~~~
+    ~~~~~~~~~~~~~~~~~~
     1D Gaussian fit
 
     params:
         radius - The qinv radius (units: fm)
         lam - The lambda parameter (unitless)
+        norm - Normalization parameter (unitless)
     q: An numpy array of q_inv values (units: GeV)
     data: {optional} observed data with which we will calculate the residual
 
     .. math::
 
-        CF(q_{inv}) = λ exp( -(q_{inv} * R)^2 )
+        CF(q_{inv}) = norm * (1 + λ exp( -(q_{inv} * R)^2 ))
 
     """
 
     t = -(q * params['radius'] / HBAR_C) ** 2
-    model = 1 + params['lam'] * np.exp(list(t))
+    model = params['norm'] * (1.0 + params['lam'] * np.exp(list(t)))
 
     if data is None:
         return model
@@ -49,7 +50,7 @@ def fitfunc_qinv_gauss(params, q, data=None):
 def fitfunc_qinv_lorentz(params, q, data=None):
     """
     fitfunc_qinv_lorentz
-    ~~~~~~~~~~~~
+    ~~~~~~~~~~~~~~~~~~~~
     1D Lorentzian fit
 
     .. math::
@@ -86,20 +87,23 @@ def fitfunc_qinv_lorentz(params, q, data=None):
     return res
 
 
+
 def fitfunc_qinv_gauss_ll(params, q, data=None):
     """
     Calculate the gaussian fit returning log-likelyhood χ² calculation.
 
     """
+
     C = fitfunc_qinv_gauss(params, q)
     if data is None:
         return C
+
+    # 'data' provided is numerator, denominator pair
     A, B = data
     ApB_Cp1 = (A + B) / (C + 1)
+
     res = -2 * ( A * np.log(C / A * ApB_Cp1) + B * np.log(ApB_Cp1 / B) )
-    # print(res)
-    # print(1.0/res)
-    # input()
+
     return res
 
 fitfunc_qinv = fitfunc_qinv_gauss
