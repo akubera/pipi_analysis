@@ -6,6 +6,7 @@ from .root_helpers import get_root_object
 from .analysis import Analysis
 import ROOT
 
+
 class Femtolist:
     """
     Class wrapping functionality of the femtolist object - the results in a
@@ -30,3 +31,7 @@ class Femtolist:
     def __iter__(self):
         for analysis in self._femtolist:
             yield Analysis(analysis)
+
+    def __getitem__(self, idx):
+        if isinstance(idx, int):
+            return Analysis(self._femtolist.At(idx))
