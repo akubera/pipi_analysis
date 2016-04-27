@@ -118,7 +118,7 @@ TRACK_CUT_INFO_STR = """\
 """
 
 
-def do_qinv_analysis(num, den, cf_title="CF; q (GeV); CF(q)", output_imagename='qinv.png'):
+def do_qinv_analysis(num, den, cf_title="CF; q (GeV); CF(q)", output_imagename='qinv.eps'):
     """
     Code performing the qinv analysis - should probably be moved to a submodule
     """
@@ -145,8 +145,9 @@ def do_qinv_analysis(num, den, cf_title="CF; q (GeV); CF(q)", output_imagename='
     stop_fit = ratio.FindBin(0.25)
 
     qinv_params = Parameters()
-    qinv_params.add('radius', value=0.5, min=0.0)
+    qinv_params.add('radius', value=6.5, min=0.0)
     qinv_params.add('lam', value=0.5)  # , min=0.0, max=1.0)
+    qinv_params.add('norm', value=1.0, min=0.990, max=1.01)
 
     x_vals = X[:stop_fit]
     y_vals = Y[:stop_fit]
@@ -155,6 +156,9 @@ def do_qinv_analysis(num, den, cf_title="CF; q (GeV); CF(q)", output_imagename='
     data = (y_vals, e_vals)
 
     TIMESTART = time.monotonic()
+    from operator import itemgetter
+
+    # data = tuple(map(itemgetter(slice(None, stop_fit)), map(root_numpy.hist2array, (num, den))))
     qinv_fit = minimize(fitfunc_qinv, qinv_params, args=(x_vals, data))
     TIME_DELTA = time.monotonic() - TIMESTART
     report_fit(qinv_fit)
@@ -165,7 +169,7 @@ def do_qinv_analysis(num, den, cf_title="CF; q (GeV); CF(q)", output_imagename='
 
     canvas_qinv = gen_canvas()
     # canvas_qinv.cd(1)
-    ratio.GetXaxis().SetRangeUser(0.0, 0.7)
+    ratio.GetXaxis().SetRangeUser(0.0, 0.5)
     ratio.GetYaxis().SetTitleOffset(1.2)
     ratio.Draw()
 
@@ -176,6 +180,7 @@ def do_qinv_analysis(num, den, cf_title="CF; q (GeV); CF(q)", output_imagename='
     fit_plot.Draw("same")
     canvas_qinv.Draw()
     canvas_qinv.SaveAs(output_imagename)
+    canvas_qinv.Write()
     # output_image = ROOT.TImage.Create()
     # output_image.FromPad(canvas_qinv)
     # output_image.WriteImage(output_imagename)
@@ -219,7 +224,7 @@ for analysis in femtolist:
     else:
         print(" ***** Q_inv Study *****\n")
         qinv_title = make_cf_title(title='Q_{inv}', units='q_{inv}')
-        do_qinv_analysis(num, den, cf_title=qinv_title, output_imagename=analysis_name + '_qinv.png')
+        do_qinv_analysis(num, den, cf_title=qinv_title, output_imagename=analysis_name + '_qinv.eps')
 
     #
     # Fake Qinv - Kt binned
@@ -240,11 +245,23 @@ for analysis in femtolist:
     #
     kt_qinv = get_root_object(analysis, ["KT_Qinv"])
     if kt_qinv != None:
+        print("   Found kt binned Qinv")
         for ktbin in kt_qinv:
+            kt_bin_name = ktbin.GetName()
+            print("       (%s)" % kt_bin_name, NUM_QINV_PATH)
             ktn = get_root_object(ktbin, NUM_QINV_PATH)
             ktd = get_root_object(ktbin, DEN_QINV_PATH)
-
-
+            if ktn == None:
+                print("Could not find numerator")
+                continue
+            if ktd == None:
+                print("Could not find denominator")
+                continue
+            do_qinv_analysis(ktn, ktd,
+                            cf_title="KT %s Q_inv; q_{inv} (fake); C(q_{inv});" % (kt_bin_name),
+                            output_imagename=analysis_name + '_fake_qinv.png')
+    input()
+    continue
     #
     # 3D
     #
@@ -267,21 +284,52 @@ for analysis in femtolist:
 
     hist_3d = Q3D(q3d_num, q3d_den)
     hist_3d.ratio._ptr.Write()
-    out_side = hist_3d.ratio.project_2d(0, 1, (-0.03, 0.03), bounds_x=(0.0, None))
+    out_side_num, out_side_den = hist_3d.num._ptr, hist_3d.den._ptr
 
-    fig = plt.figure(figsize=(6, 3.2))
+    zz = hist_3d.ratio._ptr.GetZaxis().FindBin(0.0)
 
-    ax = fig.add_subplot(111)
-    ax.set_title('colorMap')
-    plt.contourf(out_side)
-    ax.set_aspect('equal')
 
-    cax = fig.add_axes([0.12, 0.1, 0.78, 0.8])
-    cax.get_xaxis().set_visible(True)
-    cax.get_yaxis().set_visible(False)
-    cax.patch.set_alpha(0)
-    cax.set_frame_on(False)
-    plt.colorbar(orientation='vertical')
+    for zdist in range(1, 4):
+        zrange = zz - zdist, zz + zdist
+        out_side_num.GetZaxis().SetRange(*zrange)
+        out_side_den.GetZaxis().SetRange(*zrange)
+
+        out_side = out_side_num.Project3D("yx")
+        out_side.Divide(out_side_den.Project3D("yx"))
+
+        out_side_cnvs = ROOT.TCanvas("out_side")
+        out_side.Write()
+        out_side.SetStats(False)
+        out_side.Draw("colz")
+        out_side_cnvs.Draw()
+        out_side_cnvs.SaveAs("OUTSIDEz%02d.eps" % zdist)
+
+        # input()
+    out_side_num.GetZaxis().SetRange()
+    out_side_den.GetZaxis().SetRange()
+    # out_side_num = hist_3d.num.project_2d(0, 1, (-0.03, 0.03), bounds_x=(0.0, None))
+    # out_side_den = hist_3d.den.project_2d(0, 1, (-0.03, 0.03), bounds_x=(0.0, None))
+    # # print(out_side_num.shape)
+    # out_side_ratio = out_side_num / out_side_den
+    # out_side = root_numpy.array2hist(out_side_ratio, hist_3d.num._ptr.Clone("out_side"))
+    # print(out_side)
+    # print(hist_3d.ratio.data, out_side_ratio)
+    # print(hist_3d.ratio.data - out_side_ratio)
+    # out_side = hist_3d.ratio.project_2d(0, 1, (-0.03, 0.03), bounds_x=(0.0, None))
+
+    # fig = plt.figure(figsize=(6, 3.2))
+
+    # ax = fig.add_subplot(111)
+    # ax.set_title('colorMap')
+    # plt.contourf(out_side)
+    # ax.set_aspect('equal')
+
+    # cax = fig.add_axes([0.12, 0.1, 0.78, 0.8])
+    # cax.get_xaxis().set_visible(True)
+    # cax.get_yaxis().set_visible(False)
+    # cax.patch.set_alpha(0)
+    # cax.set_frame_on(False)
+    # plt.colorbar(orientation='vertical')
     # plt.show()
 
 
@@ -421,14 +469,14 @@ for analysis in femtolist:
         p[1].Draw("same")
 
     output_canvas.Draw()
-    output_canvas.SaveAs(analysis_name + "_q3d.png")
+    output_canvas.SaveAs(analysis_name + "_q3d.eps")
     # output_image = ROOT.TImage.Create()
     # output_image.FromPad(output_canvas)
     # output_image.WriteImage(analysis_name + "_q3d.png")
 
     # input()
 
-    ROOT.gApplication.Run()
+    # ROOT.gApplication.Run()
 
     # ratio.Draw()
     # break
