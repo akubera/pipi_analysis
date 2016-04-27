@@ -10,7 +10,7 @@ import root_numpy
 import numpy as np
 import numpy.ma as ma
 from itertools import starmap
-from .histogram import Histogram
+from stumpy import Histogram
 
 
 class Q3D:
@@ -25,14 +25,14 @@ class Q3D:
 
         assert self.num.shape == self.den.shape
         assert all(n[i] == d[i]
-                   for n, d in zip(self.num._axes, self.den._axes)
+                   for n, d in zip(self.num.axes, self.den.axes)
                    for i in (2, 10, -2))
 
 
         if do_sanity_check:
             sanity_bins = self.num.getslice((-.1, .1), (-.1, .1), (-.1, .1))
             sanity_data = np.array([
-                self.num._ptr.GetBinContent(x, y, z)
+                self.num[x, y, z]
                 for x in range(sanity_bins[0].start, sanity_bins[0].stop)
                 for y in range(sanity_bins[1].start, sanity_bins[1].stop)
                 for z in range(sanity_bins[2].start, sanity_bins[2].stop)
