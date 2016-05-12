@@ -12,6 +12,7 @@
 *.png
 *.pdf
 *.eps
+*.svg
 
 !scripts/*.sh
 
@@ -38,6 +39,7 @@ runs
 .db
 
 __pycache__
+.ipynb_checkpoints
 
 data
 
