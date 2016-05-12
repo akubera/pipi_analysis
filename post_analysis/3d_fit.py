@@ -18,7 +18,7 @@ from pprint import pprint
 from stumpy import Histogram
 from argparse import ArgumentParser
 from collections import defaultdict
-from .fitting.gaussian import GaussianModel
+from fitting.gaussian import GaussianModel, GaussianModelCoulomb
 from pionpion import Femtolist, Analysis
 from pionpion.root_helpers import get_root_object
 from pionpion.q3d import Q3D
@@ -114,9 +114,14 @@ if femtolist == None:
     sys.exit(1)
 
 
-output = TFile(args.output, 'RECREATE')
+if args.output is not None:
+    output = TFile(args.output, 'RECREATE')
+else:
+    # just make a mock object so no output is created
+    import unittest.mock
+    output = unittest.mock.MagicMock()
 
-# analysis = get_root_object(femtolist, "PiPiAnalysis_00_10_pip")
+
 TRACK_CUT_INFO_STR = """\
  Charge: {charge}
  Mass: {mass}
@@ -136,36 +141,57 @@ def do_qinv_analysis(num, den, cf_title="CF; q (GeV); CF(q)", output_imagename='
         Denominator histogram
     """
 
-    #
-    # Do Fit
-    #
+    ModelClass = GaussianModelCoulomb
 
-    X = hist_method_to_array(ratio, 'GetBinCenter')
-    Y = hist_method_to_array(ratio, 'GetBinContent')
-    E = hist_method_to_array(ratio, 'GetBinError')
+    fit_slice = num.x_axis.get_slice((0, 0.17))
+    qinv_params = ModelClass.guess()
+    x = num.x_axis.bin_centers[fit_slice]
 
-    stop_fit = ratio.FindBin(0.25)
 
-    qinv_params = GaussianModel.guess()
-
-    x_vals = X[:stop_fit]
-    y_vals = Y[:stop_fit]
-    e_vals = E[:stop_fit]
-
-    data = (y_vals, e_vals)
+    num_slice, den_slice = num[fit_slice], den[fit_slice]
 
     TIMESTART = time.monotonic()
-    from operator import itemgetter
 
-    # data = tuple(map(itemgetter(slice(None, stop_fit)), map(root_numpy.hist2array, (num, den))))
-    qinv_fit = minimize(fitfunc_qinv, qinv_params, args=(x_vals, data))
+    # use log-likelihood fitting method
+    # qinv_fit = minimize(GaussianModel.as_loglike, qinv_params, args=(x, num_slice, den_slice), method='differential_evolution')
+
+    # use old 'simple' residual method
+    ratio = num / den
+    ratio, errors = ratio[fit_slice], ratio.errors[fit_slice]
+    qinv_fit = minimize(ModelClass.as_resid, qinv_params, args=(x, ratio, errors))
+
+    # random data to check chi^2
+    # rdata = GaussianModel().eval(qinv_params, x=x)
+    # offset = np.random.normal(0, 0.01, len(rdata))
+    # rdata += offset + 0.001
+    # errors = np.abs(offset)  # np.random.normal(0, 0.01, len(rdata))
+    # ratio = rdata
+    # qinv_fit = minimize(GaussianModel.as_resid, qinv_params, args=(x, rdata, errors))
+
     TIME_DELTA = time.monotonic() - TIMESTART
     report_fit(qinv_fit)
     print("fitting time %0.3fs (%0.3f ms/call)" % (TIME_DELTA, TIME_DELTA * 1e3 / qinv_fit.nfev))
 
-    FIT_X = np.linspace(X[0], X[-1], 300)
+    # generate x values for fit plots
+    FIT_X = np.linspace(x[0], x[-1], 300)
+    FIT_Y = ModelClass().eval(qinv_fit.params, x=FIT_X)
+
+    # Repeat without Coulomb interaction
+    qinv_fit_nocoulomb = minimize(GaussianModel.as_resid, qinv_params, args=(x, ratio, errors))
+    report_fit(qinv_fit_nocoulomb)
+    FIT_Y_NO_COULOMB = GaussianModel().eval(qinv_fit_nocoulomb.params, x=FIT_X)
+
+    # print(np.array([FIT_Y, ratio[fit_slice], ratio.errors[fit_slice]]).T)
+
+    plt.plot(FIT_X, FIT_Y)
+    plt.plot(FIT_X, FIT_Y_NO_COULOMB)
+    plt.errorbar(x, ratio, errors, fmt='.')
+    plt.show()
+
+    return None
     FIT_Y = fitfunc_qinv(qinv_fit.params, FIT_X)
 
+    NOCOULOMB = GaussianModel
     canvas_qinv = gen_canvas()
     # canvas_qinv.cd(1)
     ratio.GetXaxis().SetRangeUser(0.0, 0.5)
@@ -213,8 +239,7 @@ for analysis in femtolist:
     # Qinv
     #
 
-    num = get_root_object(analysis, NUM_QINV_PATH)
-    den = get_root_object(analysis, DEN_QINV_PATH)
+    num, den = analysis.qinv_pair
 
     if num == None or den == None:
         print("Missing Qinv plots")
@@ -222,8 +247,6 @@ for analysis in femtolist:
         print('  den:', den)
     else:
         print(" ***** Q_inv Study *****\n")
-        num = Histogram.BuildFromRootHist(num)
-        den = Histogram.BuildFromRootHist(den)
         qinv_title = make_cf_title(title='Q_{inv}', units='q_{inv}')
         do_qinv_analysis(num, den, cf_title=qinv_title, output_imagename=analysis_name + '_qinv.eps')
 
