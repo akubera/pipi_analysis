@@ -2,27 +2,30 @@
 #
 # post_analysis/3d_fit.py
 #
+from __future__ import print_function, absolute_import
 
 import sys
+import time
+import types
+import ctypes
+import numbers
+import itertools
 import numpy as np
+import matplotlib as ml
+import matplotlib.pyplot as plt
+
+from pprint import pprint
+from stumpy import Histogram
 from argparse import ArgumentParser
 from collections import defaultdict
-import itertools
-import types
-import numbers
-import ctypes
-import time
+from .fitting.gaussian import GaussianModel
+from pionpion import Femtolist, Analysis
 from pionpion.root_helpers import get_root_object
-from pionpion.analysis import Analysis
 from pionpion.q3d import Q3D
 from pionpion.fit import (
     fitfunc_qinv,
     fitfunc_3d,
 )
-from pprint import pprint
-
-import matplotlib as ml
-import matplotlib.pyplot as plt
 
 TSTART = time.monotonic()
 print("loading ROOT... ", end='', flush=True, file=sys.stderr)
@@ -36,8 +39,6 @@ from ROOT import (
     TGraph,
 )
 import root_numpy
-from pionpion.histogram import Histogram
-
 print("Done (%fs)" % (time.monotonic() - TSTART), file=sys.stderr)
 
 CACHE = []
@@ -47,6 +48,17 @@ NUM_QINV_PATH = "Num_qinv_pip Num_qinv_pim Numc_qinv_pip Numc_qinv_pim".split()
 DEN_QINV_PATH = "Den_qinv_pip Den_qinv_pim Denc_qinv_pip Denc_qinv_pim".split()
 NUM_Q3D_PATH = ["Num_q3D_pip", "Num_q3D_pim"]
 DEN_Q3D_PATH = ["Den_q3D_pip", "Den_q3D_pim"]
+
+
+def arguments():
+    """Parse and return command line arguments"""
+    parser = ArgumentParser()
+    parser.add_argument("filename", help="root filename to analyze")
+    parser.add_argument("output",
+                        nargs='?',
+                        default=None,
+                        help="Root filename to write results")
+    return parser.parse_args()
 
 
 def gen_canvas():
@@ -59,8 +71,6 @@ def gen_canvas():
     canvas = ROOT.TCanvas(name, "Canvas", 200, 10, 700, 500)
     STORED_CANVASES.append(canvas)
     return canvas
-
-# gen_canvas = iter(gen_canvas())
 
 
 def hist_method_to_array(hist, func):
@@ -92,21 +102,17 @@ def get_ratio(name, num, den, norm_x_ranges, *, cache=True):
     return ratio
 
 
-parser = ArgumentParser()
-parser.add_argument("filename", help="root filename to analyze")
-parser.add_argument("output",
-                    nargs='?',
-                    default='Result.root',
-                    help="root filename to analyze")
-args = parser.parse_args()
+args = arguments()
 
-file = TFile(args.filename, 'READ')
+# file = TFile(args.filename, 'READ')
+# femtolist = get_root_object(file, ['femtolist', 'PWG2FEMTO.femtolist'])
+femtolist = Femtolist(args.filename)
 
-femtolist = get_root_object(file, ['femtolist', 'PWG2FEMTO.femtolist'])
 
 if femtolist == None:
     print("Could not find femtolist", file=sys.stderr)
     sys.exit(1)
+
 
 output = TFile(args.output, 'RECREATE')
 
@@ -121,18 +127,14 @@ TRACK_CUT_INFO_STR = """\
 def do_qinv_analysis(num, den, cf_title="CF; q (GeV); CF(q)", output_imagename='qinv.eps'):
     """
     Code performing the qinv analysis - should probably be moved to a submodule
+
+    Args
+    ----
+    num : Histogram
+        Numerator histogram
+    den : Histogram
+        Denominator histogram
     """
-
-    norm_x_range = 0.3, 0.5
-    num_norm_bin_range = map(num.FindBin, norm_x_range)
-    den_norm_bin_range = map(num.FindBin, norm_x_range)
-
-    num_scale = 1.0 / num.Integral(*num_norm_bin_range)
-    den_scale = 1.0 / den.Integral(*den_norm_bin_range)
-
-    ratio = get_ratio('ratio', num, den, norm_x_range)
-    ratio.SetTitle(cf_title)
-    ratio.Write()
 
     #
     # Do Fit
@@ -144,10 +146,7 @@ def do_qinv_analysis(num, den, cf_title="CF; q (GeV); CF(q)", output_imagename='
 
     stop_fit = ratio.FindBin(0.25)
 
-    qinv_params = Parameters()
-    qinv_params.add('radius', value=6.5, min=0.0)
-    qinv_params.add('lam', value=0.5)  # , min=0.0, max=1.0)
-    qinv_params.add('norm', value=1.0, min=0.990, max=1.01)
+    qinv_params = GaussianModel.guess()
 
     x_vals = X[:stop_fit]
     y_vals = Y[:stop_fit]
@@ -223,6 +222,8 @@ for analysis in femtolist:
         print('  den:', den)
     else:
         print(" ***** Q_inv Study *****\n")
+        num = Histogram.BuildFromRootHist(num)
+        den = Histogram.BuildFromRootHist(den)
         qinv_title = make_cf_title(title='Q_{inv}', units='q_{inv}')
         do_qinv_analysis(num, den, cf_title=qinv_title, output_imagename=analysis_name + '_qinv.eps')
 
