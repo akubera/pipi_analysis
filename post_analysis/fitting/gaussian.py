@@ -12,8 +12,12 @@ from post_analysis.pionpion.fit import fitfunc_qinv_gauss
 HBAR_C = 0.1973269788 # GeV·fm
 
 
-
 class GaussianModel(Model):
+    """
+    Model of a 'simple' Gaussian fit to a 1D femtoscopic
+    correlation function. This includes the parameters norm,
+    lam, and radius.
+    """
 
     @staticmethod
     def gauss(x, radius, lam, norm):
@@ -23,46 +27,44 @@ class GaussianModel(Model):
     def __init__(self, *args, **kwargs):
         super().__init__(GaussianModel.gauss, *args, **kwargs)
 
-    def guess(self, data, *kws):
-        p = Parameters()
-        #           (Name,  Value,  Vary,   Min,  Max,  Expr)
-        p.add_many(('norm',   1.0,  True, None, None,  None),
-                   ('lam',    0.5,  True, None, None,  None),
-                   ('radius', 5.0,  True, None, None,  None),
-                  )
-        return p
-
-
-class GaussianModel(Model):
-
     @staticmethod
-    def gauss(x, radius, lam, norm):
-        epart = -(x * radius / HBAR_C) ** 2
-        return norm * (1.0 + lam * np.exp(epart.astype(float)))
+    def guess(data=None, *kws):
+        """
+        Creates the default Parameters, or if data is given, creates naïve
+        initial parameter guess based on this data
+        """
+        if data is not None:
+            inorm = data[-1]
+        else:
+            inorm = 1.0
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(GaussianModel.gauss, *args, **kwargs)
-
-    def guess(self, data, *kws):
         p = Parameters()
         #           (Name,  Value,  Vary,   Min,  Max,  Expr)
-        p.add_many(('norm',   1.0,  True, None, None,  None),
+        p.add_many(('norm', inorm,  True, None, None,  None),
                    ('lam',    0.5,  True, None, None,  None),
-                   ('radius', 5.0,  True, None, None,  None),
+                   ('radius', 6.5,  True,  0.0, None,  None),
                   )
         return p
 
-    # C = fitfunc_qinv_gauss(params, q)
-    # if data is None:
-    #     return C
+    @classmethod
+    def as_loglike(cls, p, q_inv, num, den):
+        """
+        Log-Likelihood method of fitting
+        """
+        A, B = num, den
+        C = cls.gauss(q_inv, **p)
 
+        ApB_Cp1 = (A + B) / (C + 1)
 
-    # 'data' provided is numerator, denominator pair
-    # A, B = data
-    # print(">>", A, B)
-    # ApB_Cp1 = (A + B) / (C + 1)
-    #
-    # res = -2 * ( A * np.log(C / A * ApB_Cp1) + B * np.log(ApB_Cp1 / B) )
+        resid = -2 * ( A * np.log(C / A * ApB_Cp1) + B * np.log(ApB_Cp1 / B) )
+        # print(resid, np.sum(resid))
+        return resid
+
+    @classmethod
+    def as_resid(cls, p, q_inv, ratio, errs):
+        model = cls.gauss(q_inv, **p)
+        res = np.sqrt((ratio - model) ** 2 / errs ** 2)
+        return res
 
 
 class GaussianSlopeModel(Model):
@@ -80,13 +82,15 @@ class GaussianSlopeModel(Model):
     def __init__(self, *args, **kwargs):
         super().__init__(GaussianModel.gauss, *args, **kwargs)
 
-    def guess(self):
-        p = Parameters()
+    @staticmethod
+    def guess(data=None, **kw):
+        """
+        Uses same parameters as GaussianModel, along with added intercept
+        and slope.
+        """
+        p = GaussianModel.guess(data, **kws)
         #           (Name,  Value,  Vary,   Min,  Max,  Expr)
-        p.add_many(('norm',   1.0,  True, None, None,  None),
-                   ('lam',    0.5,  True, None, None,  None),
-                   ('radius', 7.0,  True, None, None,  None),
-                   ('intercept', 0.0903,  True, None, None,  None),
+        p.add_many(('intercept', 0.0903,  True, None, None,  None),
                    ('slope',  -0.00038845,  True, None, None,  None),
                   )
         return p
@@ -129,11 +133,16 @@ class GaussianModelCoulomb(Model):
     def __init__(self, *args, **kwargs):
         super().__init__(self.gauss, *args, **kwargs)
 
-    def guess(data, **kws):
-        p = Parameters()
-        #           (Name,  Value,  Vary,   Min,  Max,  Expr)
-        p.add_many(('norm',   1.0,  True, None, None,  None),
-                   ('lam',    0.5,  True, None, None,  None),
-                   ('radius', 7.0,  True, None, None,  None),
-                  )
+    @staticmethod
+    def guess(data=None, **kws):
+        """
+        Returns same guess of parameters as standard GaussianModel
+        """
+        p = GaussianModel.guess(data, **kws)
         return p
+
+    @classmethod
+    def as_resid(cls, p, q_inv, ratio, errs):
+        model = cls.gauss(q_inv, **p)
+        res = np.sqrt((ratio - model) ** 2 / errs ** 2)
+        return res
