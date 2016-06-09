@@ -42,7 +42,7 @@ class GaussianModel(Model):
         #           (Name,  Value,  Vary,   Min,  Max,  Expr)
         p.add_many(('norm', inorm,  True, None, None,  None),
                    ('lam',    0.5,  True, None, None,  None),
-                   ('radius', 6.5,  True,  0.0, None,  None),
+                   ('radius', 5.5,  True,  0.0, None,  None),
                   )
         return p
 
@@ -51,8 +51,10 @@ class GaussianModel(Model):
         """
         Log-Likelihood method of fitting
         """
-        A, B = num, den
-        C = cls.gauss(q_inv, **p)
+        skip_zeros = (den != 0.0) & (num != 0.0)
+
+        A, B = num[skip_zeros], den[skip_zeros]
+        C = cls.gauss(q_inv[skip_zeros], **p)
 
         ApB_Cp1 = (A + B) / (C + 1)
 
@@ -126,7 +128,7 @@ class GaussianModelCoulomb(Model):
         """
         epart = -(x * radius / HBAR_C) ** 2
         f = np.nan_to_num(GaussianModelCoulomb.gammow(x))
-        return norm * ((1.0 - lam) + lam * np.exp(epart.astype(np.float64)) * f)
+        return norm * ((1.0 - lam) + f * lam * (1.0 + np.exp(epart.astype(np.float64))))
 
     @staticmethod
     def gammow(q):
@@ -148,9 +150,24 @@ class GaussianModelCoulomb(Model):
     @classmethod
     def as_resid(cls, p, q_inv, ratio, errs):
         model = cls.gauss(q_inv, **p)
-        res = np.sqrt((ratio - model) ** 2 / errs ** 2)
+        res = np.sqrt(((ratio - model) ** 2 / errs ** 2).astype(np.float64))
         return res
 
+    @classmethod
+    def as_loglike(cls, p, q_inv, num, den):
+        """
+        Log-Likelihood method of fitting
+        """
+        skip_zeros = (den != 0.0) & (num != 0.0)
+        A, B = num[skip_zeros], den[skip_zeros]
+        C = cls.gauss(q_inv[skip_zeros], **p)
+
+        ApB_Cp1 = (A + B) / (C + 1)
+        log1 = np.log((C / A * ApB_Cp1).astype(np.float64))
+        log2 = np.log((ApB_Cp1 / B).astype(np.float64))
+
+        resid = -2 * (A * log1  + B * log2)
+        return resid
 
 
 class GaussianModelFSI(Model):
@@ -174,8 +191,9 @@ class GaussianModelFSI(Model):
         """
 
         epart = -(x * radius / HBAR_C) ** 2
+        exp_factor = 1.0 + np.exp(epart.astype(np.float64))
         fsi_factor = GaussianModelFSI.CC(x)
-        return norm * ((1.0 - lam) + lam * np.exp(epart.astype(np.float64)) * fsi_factor)
+        return norm * ((1.0 - lam) + lam * fsi_factor * exp_factor)
 
 
     def __init__(self, *args, **kwargs):
@@ -195,3 +213,23 @@ class GaussianModelFSI(Model):
         model = GaussianModelFSI.gauss(q_inv, **p)
         res = np.sqrt((ratio - model) ** 2 / errs ** 2)
         return res
+
+    @classmethod
+    def as_loglike(cls, p, q_inv, num, den):
+        """
+        Log-Likelihood method of fitting
+        """
+        skip_zeros = (den != 0.0) & (num != 0.0)
+        if not np.all(skip_zeros):
+            num = num[skip_zeros]
+            den = den[skip_zeros]
+            q_inv = q_inv[skip_zeros]
+
+        A, B = num, den
+        C = cls.gauss(q_inv, **p)
+
+        ApB_Cp1 = (A + B) / (C + 1)
+
+        resid = -2 * ( A * np.log(C / A * ApB_Cp1) + B * np.log(ApB_Cp1 / B) )
+        resid = resid[resid != np.nan]
+        return resid
