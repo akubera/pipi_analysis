@@ -13,10 +13,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from pprint import pprint
+from os.path import basename
+from collections import OrderedDict
 from unittest.mock import MagicMock
 from argparse import ArgumentParser, Action
 from lmfit import minimize, Parameters, report_fit
-from rootpy.interactive import wait
+from rootpy.plotting import HistStack
+from rootpy.plotting.utils import draw
 
 from pionpion import Femtolist
 from pionpion.fit import fitfunc_qinv, fitfunc_qinv_gauss_ll
@@ -55,7 +58,9 @@ def argument_parser():
     parser.add_argument("--do-ktbin",
                         action='store_true',
                         help="Processes all kt-binned correlation functions (if any)")
-    parser.add_argument("datafile", help="ROOT filename to analyze")
+    parser.add_argument("datafile", help="ROOT filename to analyze. "
+                                         "Separate filenames by commas if you want more than"
+                                         "one file in femtolist")
     parser.add_argument("output_filename",
                         nargs='?',
                         default=None,
@@ -122,8 +127,78 @@ def fit_to_TF1(fit_res, x):
     """
     print(dir(fit_res), )# .model)
 
+
 def get_data():
     pass
+
+
+class QinvFit:
+    """
+    """
+
+    def __init__(self, analysis, args):
+        """
+        Construct a fit from an analysis (located in a femtolist)
+        """
+        print("***", analysis.name)
+        self.fit_res = fit_res = self.do_fit(analysis.qinv_pair)
+        self.name = analysis.name
+
+        if not args.do_ktbin:
+            self.kt_binned_fits = None
+        else:
+            print("\n  :: Kt binned fits ::\n")
+            self.kt_binned_fits = OrderedDict()
+
+            for ktbin, subanalysis in enumerate(analysis.kt_binned_pairs):
+                name = subanalysis.GetName()
+                q = np.mean(tuple(map(float, name.split('_'))))
+                # q =subanalysis.GetName().split('_')
+                pair = analysis.qinv_pair_in_kt_bin(ktbin)
+                fit_res = self.do_fit(pair)
+                rad = fit_res.params['radius']
+                lam = fit_res.params['lam']
+
+                self.kt_binned_fits[name] = {
+                    'kt': q,
+                    'radius': rad.value,
+                    'radius_err': rad.stderr,
+                    'lambda': lam.value,
+                    'lambda_err': lam.stderr,
+                }
+
+    def do_fit(self, qinv_pair):
+        return loglikely_fit(*qinv_pair)
+
+    def write(self, file):
+        """
+        Write the objects to the file. If file is TDirectory
+        (including TFiles) this is 'cd' to and written
+        """
+
+        if isinstance(file, ROOT.TDirectory):
+            file.cd()
+            output = ROOT.TObjArray()
+            output.SetName(self.name)
+            if self.kt_binned_fits:
+                f = self.kt_binned_fits.values()
+
+                x = np.array([b['kt'] for b in f])
+                r = np.array([b['radius'] for b in f])
+                re = np.array([b['radius_err'] for b in f])
+                l = np.array([b['lambda'] for b in f])
+                le = np.array([b['lambda_err'] for b in f])
+                npoints = len(x)
+
+                rplot = ROOT.TGraphErrors(npoints, x, r, np.zeros(npoints), re)
+                rplot.SetName("radius")
+                output.Add(rplot)
+                lplot = ROOT.TGraphErrors(npoints, x, l, np.zeros(npoints), le)
+                lplot.SetName("lambda")
+                output.Add(lplot)
+
+            output.Write()
+
 
 def main(argv):
     """ Main Function of qinv_fit """
@@ -133,166 +208,35 @@ def main(argv):
     norm_x_range = tuple(map(float, args.norm_range.split(':')))
     output_domain = tuple(map(float, args.output_domain.split(':')))
 
-    # create the femtolist from the input file
-    femtolist = Femtolist(args.datafile)
+    femtolist_names = tuple(map(str.strip, args.datafile.split(',')))
 
-    # create outputfile
+    # create the femtolist(s) from the input file(s)
+    femtolists = tuple(map(Femtolist, femtolist_names))
+
+    # generate filename from input name
     if args.output_filename is None:
-        ext_position = args.datafile.rfind('.')
-        args.output_filename = args.datafile[:ext_position] + ".qinv" + args.datafile[ext_position:]
+        filename = femtolist_names[0]
+        ext_position = filename.rfind('.')
+        fname, ext = filename[:ext_position], filename[ext_position:]
+        args.output_filename =  "%s.qinv%s" % (fname, ext)
 
+    # create outputfile (Mock object if output_filename is '-')
     output_file = (ROOT.TFile(args.output_filename, 'RECREATE')
                    if args.output_filename != '-'
                    else MagicMock())
 
-    # loop through each analysis in femtolist
-    for analysis in femtolist:
-        print("***", analysis.name)
+    # Create fit object from each analysis in femtolist
+    for femtolist in femtolists:
+        fname = basename(femtolist._file.GetName().rstrip(".root"))
+        d = output_file.mkdir(fname)
+        d.cd()
+        for analysis in femtolist:
+            qfit = QinvFit(analysis, args)
+            o = d.mkdir(analysis.name)
+            if o != None:
+                qfit.write(o)
 
-        # model = GaussianModelFSI()
-        # params = model.guess()
-        # model.fit(params, args=analysis.qinv_pair)
-        fit_res = do_timed_fit(lambda: loglikely_fit(*analysis.qinv_pair))
-        # fit_to_TF1(fit_res, None)
-        # ROOT.TF1(np.array([1,1,1,1.0,], dtype=np.float64))
-        print(analysis.name, fit_res.params['radius'].value, fit_res.params['radius'].stderr)
-
-        if args.do_ktbin:
-            print("\n  :: Kt binned fits ::\n")
-            def split_value_error(v):
-                return np.array([v.value, v.stderr])
-
-            kt_info = []
-            radius_data = []
-            lam_data = []
-            for ktbin, subanalysis in enumerate(analysis.kt_binned_pairs):
-                # q = np.average()
-                q = np.mean(tuple(
-                    map(float, subanalysis.GetName().split('_'))
-                ))
-                # q =subanalysis.GetName().split('_')
-                pair = analysis.qinv_pair_in_kt_bin(ktbin)
-                # fit_res = do_timed_fit(lambda: loglikely_fit(*pair))
-                fit_res = loglikely_fit(*pair)
-                kt_info.append(q)
-                radius_data.append(split_value_error(fit_res.params['radius']))
-                lam_data.append(split_value_error(fit_res.params['lam']))
-                # kt_info.append((q, , split_value_error(fit_res.params['lam'])))
-
-            mt_info = np.sqrt(np.array(kt_info) ** 2 + 0.138 ** 2)
-            radius_data, lam_data = np.array(radius_data).T, np.array(lam_data).T
-
-            # radius_data = np.vstack((kt_info, radius_data[0], radius_data[1]))
-            # print(kt_info.T[0])
-            # rh.SetTitle("#pi Radius Fit Results (k_{T} Binned); <k_{T}> (GeV); R_{inv} (fm)")
-            # lh = ROOT.TGraphErrors(len(kt_info))
-            # lh.SetTitle("#pi Lambda Fit Results (k_{T} Binned); <k_{T}> (GeV); Lambda (fm)")
-            # for i, (x, r, l) in enumerate(kt_info):
-            #     rh.SetPoint(i, x, r[0])
-            #     lh.SetPoint(i, x, l[0])
-            #     rh.SetPointError(i, 0, r[1])
-            #     lh.SetPointError(i, 0, l[1])
-
-
-            numpoints = 7
-            assert len(kt_info) == numpoints
-            c0 = ROOT.TCanvas("radius")
-
-            xerr = np.zeros(numpoints)
-            xval = np.array([0.287195, 0.375873, 0.469237, 0.565494, 0.66286, 0.759927, 0.877914])
-            yval = np.array([8.98, 8.385, 7.775, 7.275, 6.675, 6.295, 5.825])
-            yerr = np.array([0.06, 0.09, 0.08, 0.105, 0.095, 0.115, 0.11])
-            p9053_d32x1y1 = ROOT.TGraphErrors(numpoints, xval, yval, xerr, yerr)
-            p9053_d32x1y1.SetName("/HepData/9053/d32x1y1")
-            p9053_d32x1y1.SetTitle("/HepData/9053/d32x1y1; <M_{T}> GeV; R_{inv}")
-            p9053_d32x1y1.Write()
-            p9053_d32x1y1.Draw("AP")
-            # print(mt_info, radius_data[0])
-            rh = ROOT.TGraphErrors(len(mt_info), mt_info, np.copy(radius_data[0]), xerr, np.copy(radius_data[1]))
-            for i, (x, y) in enumerate(zip(mt_info, radius_data)):
-                pass
-            print(mt_info)
-            print(radius_data[0])
-            print(radius_data[1])
-            rh.SetName("radius")
-            rh.Draw("sameAP")
-            # wait()
-
-            c1 = ROOT.TCanvas("lambda")
-            lh = ROOT.TGraphErrors(len(mt_info), mt_info, np.copy(lam_data[0]), xerr, np.copy(lam_data[1]))
-            lh.SetName("lambda")
-            lh.SetTitle("#lambda Parameter; <m_{T}> (GeV); #lambda")
-            lh.Draw("AP")
-
-
-            ROOT.gApplication._threaded = True
-            ROOT.gApplication.Run(True)
-
-
-            rh.Write()
-            # print(kt_info)
-            # rh.Draw()
-            #
-            # lh.Draw()
-            output_file.Write()
-
-            break
-        break
-            # input()
-
-        continue
-
-        print("\n:::Chi-Squared Fit:::::\n")
-        # norm_ratio = num / np.sum(num[0.7:0.8]) / (den / np.sum(den[0.7:0.8]))
-        norm_ratio = num / den
-
-
-        # ModelClass
-        fit_method = 'leastsq'
-
-        b = norm_ratio.bin_at(0.2)
-        fit_args = num.x_axis.bin_centers[:b], (norm_ratio.data[:b], norm_ratio.errors[:b])
-
-        tfit = minimize(fitfunc_qinv, qinv_params, args=fit_args, method=fit_method)
-
-        fitx = np.linspace(0, 0.1, 100)
-        fity = fitfunc_qinv(tfit.params, fitx)
-        report_fit(tfit)
-        print("\n:::LL-Fit:::::\n")
-
-        qinv_params = Parameters()
-        # qinv_params.add('radius', value=tfit.params['radius'].value, min=0.0)
-        # qinv_params.add('lam', value=tfit.params['lam'].value)
-        qinv_params.add('radius', value=6.5, min=0.0)
-        qinv_params.add('lam', value=0.5)
-        qinv_params.add('norm', value=1)
-
-
-
-        fit_args = (num.x_axis.bin_centers[:b], (num.data[:b], den.data[:b]))
-
-        # print("    ::"),
-        # pprint(list(zip(fit_args[0], *fit_args[1])))
-
-        TIMESTART = time.monotonic()
-        qinv_fit = minimize(fitfunc_qinv_gauss_ll, qinv_params, args=fit_args, method=fit_method)
-        TIME_DELTA = time.monotonic() - TIMESTART
-        time_per_call = TIME_DELTA * 1e3 / qinv_fit.nfev
-        report_fit(qinv_fit)
-        print("fitting time %0.3fs (%0.3f ms/call)" % (TIME_DELTA, time_per_call))
-
-        fitll = fitfunc_qinv(qinv_fit.params, fitx)
-        plt.plot(fitx, fity, 'r-',
-                 fitx, fitll, 'g-',)
-
-        plt.errorbar(norm_ratio.x_axis.bin_centers[:b],
-                     norm_ratio.data[:b],
-                     yerr=norm_ratio.errors[:b],
-                     fmt='b.',
-                     )
-
-        plt.show()
-
+    output_file.Write()
     output_file.Close()
 
 if __name__ == "__main__":
