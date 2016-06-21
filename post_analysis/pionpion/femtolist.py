@@ -27,11 +27,33 @@ class Femtolist:
             raise ValueError("Could not find a femtolist in %r" % (file))
 
         self._femtolist = femtolist
+        self._file = file
 
     def __iter__(self):
-        for analysis in self._femtolist:
+        if isinstance(self._femtolist, ROOT.TDirectoryFile):
+            femto_iter = map(ROOT.TKey.ReadObj, self._femtolist.GetListOfKeys())
+        else:
+            femto_iter = self._femtolist
+
+        for analysis in femto_iter:
             yield Analysis(analysis)
 
     def __getitem__(self, idx):
+        """
+        Return an analysis object either by numerical index or by name.
+        If no analysis exists, an IndexError is raised.
+        """
         if isinstance(idx, int):
-            return Analysis(self._femtolist.At(idx))
+            obj = self._femtolist.At(idx)
+        elif isinstance(idx, str):
+            obj = self._femtolist.FindObject(idx)
+        else:
+            obj = None
+
+        if obj == None:
+            raise IndexError("No analysis found with index `{}`".format(idx))
+        return Analysis(obj)
+
+    @property
+    def name(self):
+        return 'femtolist'
