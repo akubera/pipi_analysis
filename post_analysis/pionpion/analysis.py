@@ -8,6 +8,10 @@ from .root_helpers import get_root_object
 from ROOT import (
     TObjArray,
     TObjString,
+    TFile,
+    TDirectory,
+    TList,
+    TKey,
 )
 
 
@@ -21,8 +25,17 @@ class Analysis:
     QINV_DEN_PATH = ['Den_qinv_pip', 'Den_qinv_pim']
 
     def __init__(self, analysis_obj):
-        if not isinstance(analysis_obj, TObjArray):
-            raise ValueError("Analysis expected TObjArray initialization value. Found %r" % (analysis_obj))
+        if isinstance(analysis_obj, TObjArray):
+            pass
+        elif isinstance(analysis_obj, TDirectory):
+            array = TObjArray()
+            array.SetName(analysis_obj.GetName())
+            for k in analysis_obj.GetListOfKeys():
+                array.Add(k.ReadObj())
+            analysis_obj = array
+        else:
+            raise ValueError("Analysis expected TObjArray or TDirectory "
+                             "initialization value. Found %r." % (analysis_obj))
 
         self._data = analysis_obj
         self.metadata = Analysis.load_metadata(self._data.Last())
@@ -84,3 +97,117 @@ class Analysis:
         n = get_root_object(self._data, self.QINV_NUM_PATH)
         d = get_root_object(self._data, self.QINV_DEN_PATH)
         return Histogram.BuildFromRootHist(n), Histogram.BuildFromRootHist(d)
+
+    @property
+    def kt_binned_pairs(self):
+        """
+        Return the TObjArray containing the kT binned pairs
+        """
+        try:
+            return self._kt_binned_correlation_functions
+        except AttributeError:
+            pass
+        kt_cfs = get_root_object(self._data, 'KT_Qinv')
+
+        if isinstance(kt_cfs, TDirectory):
+            kt_cfs = list(map(TKey.ReadObj, kt_cfs.GetListOfKeys()))
+        elif kt_cfs == None:
+            kt_cfs = ()
+
+        self._kt_binned_correlation_functions = kt_cfs
+        return kt_cfs
+
+    def qinv_pair_in_kt_bin(self, idx):
+        """
+        """
+        if isinstance(idx, str):
+            objarray = self.kt_binned_pairs.FindObject(idx)
+        else:
+            objarray = self.kt_binned_pairs[idx]
+        n = get_root_object(objarray, self.QINV_NUM_PATH)
+        d = get_root_object(objarray, self.QINV_DEN_PATH)
+        return Histogram.BuildFromRootHist(n), Histogram.BuildFromRootHist(d)
+
+    def apply_momentum_correction(self, matrix):
+        """
+        Apply the momentum correction smearing matrix to all relevant histograms.
+
+        Args:
+            matrix: The normalized square matrix which smears the q_inv histograms.
+        """
+        def apply_matrix(root_hist):
+            hist = Histogram.BuildFromRootHist(root_hist)
+            data = hist.__rmatmul__(matrix).copy_data_with_overflow()
+            root_hist.SetContent(data)
+
+        def get_num_and_den(obj):
+            yield get_root_object(obj, self.QINV_NUM_PATH)
+            yield get_root_object(obj, self.QINV_DEN_PATH)
+
+        def get_num_and_den_in_collection(obj):
+            for tobj in obj:
+                yield from get_num_and_den(tobj)
+
+        # keys = [self.QINV_NUM_PATH, self.QINV_DEN_PATH]
+        # keys += list(map(lambda x:  self.kt_binned_pairs)
+        objs = list(get_num_and_den(self._data))
+        for kt_bin_cf in self.kt_binned_pairs:
+            objs += list(get_num_and_den(kt_bin_cf))
+
+        for obj in objs:
+            if obj == None:
+                continue
+            # apply_matrix(get_root_object(self._data, key))
+            apply_matrix(obj)
+
+    def write_into(self, output):
+        """
+        Write the analysis object into some kind of output
+        """
+
+        copied_settings = False
+        def recursive_root_write(obj, container):
+            nonlocal copied_settings
+
+            if isinstance(obj, TDirectory):
+                obj = map(TKey.ReadObj, obj.GetListOfKeys())
+
+            for o in obj:
+                container.cd()
+                # special case for my analysis! only copies the first TObjString found
+                if isinstance(o, TObjString):
+                    if copied_settings:
+                        continue
+                    copied_settings = True
+
+                elif isinstance(o, TObjArray):
+                    if isinstance(container, TDirectory):
+                        sub_dir = container.mkdir(o.GetName())
+                        recursive_root_write(o, sub_dir)
+
+                    elif isinstance(container, TObjArray):
+                        sub_container = TObjArray()
+                        sub_container.SetName(o.GetName())
+                        sub_container.SetOwner(True)
+                        recursive_root_write(o, sub_container)
+
+                else:
+                    if isinstance(container, TDirectory):
+                        o.Clone().Write()
+                    else:
+                        container.Add(o.Clone())
+
+        if isinstance(output, TDirectory):
+            container = output.mkdir(self.name)
+            recursive_root_write(self._data, container)
+            # output.Write()
+
+        elif isinstance(output, (TList, TObjArray)):
+            container = TObjArray()
+            container.SetName(self.name)
+            container.SetOwner(True)
+            recursive_root_write(self._data, container)
+            output.Add(container)
+
+        else:
+            raise NotImplementedError
