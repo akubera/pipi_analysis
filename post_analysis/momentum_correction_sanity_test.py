@@ -85,6 +85,15 @@ correction_data = np.ascontiguousarray(np.array([
     [0.0, 0.0, 0.0, 2.0, 0.0],
     [0.0, 0.0, 0.0, 1.5, 1.5],
 ]).T)
+#
+# correction_data = np.ascontiguousarray(np.array([
+#     # q_rec ↦
+#     [0.8, 0.2, 0.0, 0.0, 0.0],  # q_true
+#     [1.0, 0.5, 0.3, 0.0, 0.0],  #  ↧
+#     [1.0, 0.0, 1.0, 0.0, 0.0],
+#     [1.0, 0.0, 0.0, 2.0, 0.0],
+#     [1.0, 0.0, 0.0, 1.5, 1.5],
+# ]).T)
 
 cfilename = "sanity_check/non_ident_correction.root"
 
@@ -135,20 +144,28 @@ momentum_correct([
 
 results = ROOT.TFile(output_filename, 'READ')
 cf_results = get_root_object(results, 'femtolist.analysis.Num_qinv_pip')
-# cf_expected = np.array([
-#     35.89 * 0.8 + 53.79 * 0.2,
-#     35.89 * 0.2 + 53.79 * 0.5 + 89.77 * 0.3,
-#     89.77,
-#     98.06,
-#     0.5 * (98.06 + 39.42)
-# ])
 cf_expected = np.array([
     35.89 * 0.8 + 53.79 * 0.2,
-    (35.89 * 0.2 + 53.79 * 0.5) / 0.7,
-    (89.77 * 1.0 + 53.79 * 0.3) / 1.3,
-    (98.06 * 4.0 + 39.42 * 3.0) / 7.0,
-    39.42
+    35.89 * 0.2 + 53.79 * 0.5 + 89.77 * 0.3,
+    89.77,
+    98.06,
+    98.06 * 0.5 + 39.42 * 0.5
 ])
+# cf_expected = np.array([
+#     35.89 * 0.8 + 53.79 * 0.28571429,
+#     35.89 * 0.2 + 53.79 * 0.71428571 + 89.77 * 0.23076923,
+#     89.77 * 0.76923077,
+#     98.06 * 0.57142857,
+#     98.06 * 0.42857143 + 39.42 * 1.0
+# ])
+# cf_expected = np.array([
+#     35.89 * 0.8 + 53.79 * 0.28571429,
+#     35.89 * 0.2 + 53.79 * 0.71428571 + 89.77 * 0.23076923,
+#     89.77 * 0.76923077,
+#     98.06 * 0.66666667,
+#     98.06 * 0.33333333 + 39.42 * 1.0
+# ])
+
 cf_res_array = hist2array(cf_results)
 matches = cf_res_array == cf_expected
 print(matches)

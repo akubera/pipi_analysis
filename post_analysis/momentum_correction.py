@@ -72,51 +72,50 @@ class Corrections:
         else:
             correction = Histogram.BuildFromRootHist(root_correction)
 
+        correction = correction.as_matrix()
+
         # normalize the correction matrix
         norm_correction = self.normalize_correction_hist_true(correction)
         # norm_correction = self.normalize_correction_hist_rec(correction)
         # norm_correction = self.normalize_correction_hist_both(correction)
 
-
         # cache and return result
         self._analyses[analysis_name] = norm_correction
         return norm_correction
 
-        norm = correction.data / norm_factor_0
-
     @staticmethod
-    def normalize_correction_hist_true(correction):
+    def normalize_correction_hist_true(correction_matrix):
         """
         Normalize a 2D Histogram (behaving as a matrix)
         Args:
             correction: Square 2D histogram with
         """
         # normalize so q_true (rows) sum to 1.0
-        norm_factor = correction.data.sum(axis=0, keepdims=True, dtype=float)
-        norm = correction.data / norm_factor
+        norm_factor = correction_matrix.sum(axis=1, keepdims=True, dtype=float)
+        norm = correction_matrix / norm_factor
         return norm
 
     @staticmethod
-    def normalize_correction_hist_rec(correction):
+    def normalize_correction_hist_rec(correction_matrix):
         """
         Normalize a 2D Histogram (behaving as a matrix)
         Args:
             correction: Square 2D histogram with
         """
         # normalize so q_rec (columns) sum to 1.0
-        norm_factor = correction.data.sum(axis=1, keepdims=True, dtype=float)
-        norm = correction.data / norm_factor
+        norm_factor = correction_matrix.sum(axis=0, keepdims=True, dtype=float)
+        norm = correction_matrix / norm_factor
         return norm
 
     @staticmethod
-    def normalize_correction_hist_both(correction):
+    def normalize_correction_hist_both(correction_matrix):
         # normalize along q_true
-        norm_factor_true = correction.data.sum(axis=0, keepdims=True, dtype=float)
+        norm_factor_true = correction_matrix.sum(axis=1, keepdims=True, dtype=float)
 
-        true_norm = correction.data / norm_factor_true
+        true_norm = correction_matrix / norm_factor_true
 
         # normalize along q_rec
-        norm_factor_reconstructed = true_norm.sum(axis=1, keepdims=True)
+        norm_factor_reconstructed = true_norm.sum(axis=0, keepdims=True)
 
         return true_norm / norm_factor_reconstructed
 
@@ -162,7 +161,9 @@ def main(argv):
         if norm_correction is None:
             print("No matching correction analysis %s. Skipping." % analysis.name)
             continue
-
+        print("\n** Normalized Correction Matrix **")
+        print(norm_correction)
+        print()
         # this applies the matrix to ALL qinv histograms
         analysis.apply_momentum_correction(norm_correction)
 
