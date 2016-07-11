@@ -4,6 +4,7 @@
 
 from .root_helpers import get_root_object
 from .analysis import Analysis
+from os.path import basename
 import ROOT
 
 
@@ -19,9 +20,16 @@ class Femtolist:
     ]
 
     def __init__(self, file):
-        if isinstance(file, str):
-            file = ROOT.TFile(file, "READ")
+        """
+        Construct femtolist from file; given either a TFile or the
+        path to the file.
+        If no femtolist object is found inside the file - a ValueError
+        is raised.
+        """
+        if not isinstance(file, ROOT.TDirectory):
+            file = ROOT.TFile(str(file), "READ")
 
+        # find the femtolist
         femtolist = get_root_object(file, self.FEMTOLIST_PATHS)
         if femtolist == None:
             raise ValueError("Could not find a femtolist in %r" % (file))
@@ -30,6 +38,9 @@ class Femtolist:
         self._file = file
 
     def __iter__(self):
+        """
+        Iterate over all analyses in this Femtolist
+        """
         if isinstance(self._femtolist, ROOT.TDirectoryFile):
             femto_iter = map(ROOT.TKey.ReadObj, self._femtolist.GetListOfKeys())
         else:
@@ -41,7 +52,7 @@ class Femtolist:
     def __getitem__(self, idx):
         """
         Return an analysis object either by numerical index or by name.
-        If no analysis exists, an IndexError is raised.
+        If no analysis exists, an KeyError is raised.
         """
         if isinstance(idx, int):
             obj = self._femtolist.At(idx)
@@ -51,9 +62,18 @@ class Femtolist:
             obj = None
 
         if obj == None:
-            raise IndexError("No analysis found with index `{}`".format(idx))
+            raise KeyError("No analysis found with index `{}`".format(idx))
+
         return Analysis(obj)
 
     @property
     def name(self):
-        return 'femtolist'
+        return self._femtolist.GetName()
+
+    @property
+    def filepath(self):
+        return self._file.GetName()
+
+    @property
+    def filename(self):
+        return basename(self.filepath)
