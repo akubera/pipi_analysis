@@ -91,7 +91,9 @@ class Corrections:
 
             for b in analysis.kt_binned_pairs:
                 bin_name = b.GetName()
-                ratio = get_data_from_hist(self.make_ratio(*self.get_cf_hists(b)))
+                hists = self.get_cf_hists(b)
+                print(hists)
+                ratio = get_data_from_hist(self.make_ratio(*hists))
                 result.kt_bins[bin_name] = ratio
 
         self._analyses[analysis_name] = result
@@ -103,10 +105,10 @@ class Corrections:
     @staticmethod
     def get_cf_hists(obj):
         return (
-            get_root_object(obj, 'NumTrueIdeal_MC_CF'),
-            get_root_object(obj, 'DenIdeal_MC_CF'),
-            get_root_object(obj, 'NumTrue_MC_CF'),
-            get_root_object(obj, 'Den_MC_CF')
+            get_root_object(obj, ['NumTrueIdeal_MC_CF', 'ModelNumTrueIdeal', 'CF_Num']),
+            get_root_object(obj, ['DenIdeal_MC_CF', 'ModelDenIdeal', 'CF_Den']),
+            get_root_object(obj, ['NumTrue_MC_CF', 'ModelNumTrue', 'Num_qinv_pip']),
+            get_root_object(obj, ['Den_MC_CF', 'ModelDen', 'Den_qinv_pip'])
         )
 
     @staticmethod
@@ -147,13 +149,13 @@ def apply_correction_vector(root_hist_num, root_hist_den, norm_correction):
     num_den_dim_match = num.GetNbinsX() == den.GetNbinsX()
 
     if not num_den_dim_match:
-        raise TypeError("Error, Numerator and Denominator do NOT match dimensions. Skipping.")
+        raise TypeError("Error: Numerator and Denominator do NOT match dimensions. Skipping.")
 
     elif not norm_dim_matches:
         a = norm_correction.shape[0]
         b = num.GetNbinsX()
 
-        print("Error, correction histogram has different shape than data. "
+        print("Warning: correction histogram has different shape than data, "
               "{} ≠ {}. Attempting rebin...".format(a, b),
               file=sys.stderr, end='')
 
@@ -222,10 +224,14 @@ def main(argv):
         print(norm_correction.base)
         print()
 
-        num, den = analysis[analysis.QINV_NUM_PATH], analysis[analysis.QINV_DEN_PATH]
-
         analysis_output = output_femtolist.mkdir(analysis.name)
         analysis_output.cd()
+
+        num, den = analysis[analysis.QINV_NUM_PATH], analysis[analysis.QINV_DEN_PATH]
+
+        basecf = take_hist_ratio(num, den, "CF", "(UnCorrected) Correlation Function")
+        basecf.Write()
+
 
         try:
             root_ratio = apply_correction_vector(num, den, norm_correction.base)
