@@ -48,7 +48,7 @@ class Corrections:
 
     def __init__(self, filename):
         """
-        Args:
+        Parameters:
             filename (str): Filename of the correction file.
         """
         self.file = filename
@@ -80,11 +80,14 @@ class Corrections:
             # ignore overflow+underflow bins
             return np.copy(data[1:-1])
 
-        data = get_data_from_hist(self.make_ratio(*self.get_cf_hists(analysis._data)))
+        ratio = self.make_ratio(*self.get_cf_hists(analysis._data))
+        data = get_data_from_hist(ratio)
 
         result = self.Result()
         result.base = data
+        result.root_hist = ratio
         result.kt_bins = {}
+        result.root_kt_bins = {}
 
         if analysis.has_kt_bins():
             print("Momentum Correction analysis has kT bins")
@@ -92,15 +95,39 @@ class Corrections:
             for b in analysis.kt_binned_pairs:
                 bin_name = b.GetName()
                 hists = self.get_cf_hists(b)
-                print(hists)
-                ratio = get_data_from_hist(self.make_ratio(*hists))
-                result.kt_bins[bin_name] = ratio
+                # print(hists)
+                ratio = self.make_ratio(*hists)
+                result.root_kt_bins[bin_name] = ratio
+                result.kt_bins[bin_name] = get_data_from_hist(ratio)
 
         self._analyses[analysis_name] = result
         return result
 
-    class Result:
-        pass
+    def write_into_root_dir(self, tdir, name='CorrectionHists'):
+        """
+        Writes the used momentum correction files (those saved in cache)
+        to a ROOT container.
+
+        Parameters:
+            tdir (ROOT.TDirectory): A ROOT object (such as a TFile) that
+                will store the momentum correction histograms.
+            name (str): Name of the subdirectory to create and place
+                hists. If None, a subdirectory will NOT be created
+                and the hists will be placed directly in the container
+        """
+        if name is None:
+            output = tdir
+        else:
+            output = tdir.mkdir(name)
+        output.cd()
+
+        for name, corrections in self._analyses.items():
+            print('<<', name)
+            analysis = output.mkdir(name)
+            analysis.cd()
+            corrections.root_hist.Write('CorrectionHistogram')
+            for kt_bin in sorted(corrections.root_kt_bins.keys()):
+                corrections.root_kt_bins[kt_bin].Write("ktbin_%s" % kt_bin)
 
     @staticmethod
     def get_cf_hists(obj):
@@ -136,6 +163,11 @@ class Corrections:
         self._femtolist = Femtolist(self._file)
         self._analyses = {}
         print("# Opened correction file:", value)
+
+    class Result:
+        """Trivial member-class to store correction"""
+        pass
+
 
 def take_hist_ratio(num, den, name="ratio", title="Ratio"):
     ratio = num.Clone(name)
@@ -261,7 +293,7 @@ def main(argv):
             cf = take_hist_ratio(num, den, "CF", "(UnCorrected) Correlation Function")
             cf.Write()
             cCF.Write()
-
+    corrections.write_into_root_dir(output)
     output.Close()
 
 if __name__ == "__main__":
