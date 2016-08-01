@@ -75,9 +75,7 @@ class Corrections:
         correction = correction.as_matrix()
 
         # normalize the correction matrix
-        norm_correction = self.normalize_correction_hist_true(correction)
-        # norm_correction = self.normalize_correction_hist_rec(correction)
-        # norm_correction = self.normalize_correction_hist_both(correction)
+        norm_correction = self.normalize_correction_hist_rec(correction)
 
         # cache and return result
         self._analyses[analysis_name] = norm_correction
@@ -157,15 +155,16 @@ def main(argv):
 
     # loop through analyses
     for analysis in femtolist:
-        norm_correction = corrections[analysis.name]
-        if norm_correction is None:
+        try:
+            norm_correction = corrections[analysis.name]
+        except IndexError:
             print("No matching correction analysis %s. Skipping." % analysis.name)
             continue
         print("\n** Normalized Correction Matrix **")
         print(norm_correction)
         print()
         # this applies the matrix to ALL qinv histograms
-        analysis.apply_momentum_correction(norm_correction)
+        analysis.apply_momentum_correction(norm_correction.T)
 
         # write the smeared output
         analysis.write_into(output_femtolist)
