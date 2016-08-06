@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
+from copy import copy
 from pprint import pprint
 from argparse import ArgumentParser, Action
 from pionpion import Femtolist
@@ -26,6 +27,9 @@ import ROOT
 
 def argument_parser():
     parser = ArgumentParser('qinv_fit.py')
+    parser.add_argument('-b', "--batch",
+                        action='store_true',
+                        help="Run in batch mode (no plots draw)")
     parser.add_argument("--fit-range",
                         nargs='?',
                         default='0:0.16',
@@ -71,24 +75,56 @@ def do_qinv_fit(ratio, ModelClass, fit_range):
     return qinv_fit
 
 
-def plot_cf_and_fit(cf, fit_res, ModelClass=GaussianModelFSI):
+def fitres_to_tgraph(fit_res, domain=(0.0, 0.16), npoints=300, ModelClass=GaussianModelFSI):
+    FIT_X = np.linspace(*domain, num=300)
+    FIT_Y = ModelClass().eval(fit_res.params, x=FIT_X)
+    # FIT_Y = GaussianModelFSI.gauss(FIT_X, normalized=True, **fit_res.params)
+    return ROOT.TGraph(len(FIT_X), FIT_X, FIT_Y)
+
+
+def plot_cf_and_fit(cf, fit_res, ModelClass=GaussianModelFSI, canvas=None):
     """
     Plot a correlation with line of best fit as determined by some
-    fit results.
+    fit results.d
     """
     if isinstance(cf, Histogram):
         cf = cf.AsRootHist()
 
-    FIT_X = np.linspace(0.0, 0.16, 300)
-    FIT_Y = ModelClass().eval(fit_res.params, x=FIT_X)
     cf.GetXaxis().SetRangeUser(0, 0.3)
     cf.Draw()
-    fit_plot = ROOT.TGraph(len(FIT_X), FIT_X, FIT_Y)
+    fit_plot = fitres_to_tgraph(fit_res)
     fit_plot.SetLineColor(2)
+    # fit_plot.SetTitle("")
     fit_plot.Draw("Same")
+    return fit_plot
 
-    input()
 
+def save_fit_canvas(root_cf, fit_res, name, normalized=True):
+    """
+    Create a canvas
+    """
+    root_cf.SetStats(False)
+
+    if normalized:
+        fit_res = copy(fit_res)
+        fit_res.params['norm'].value = 1.0
+
+    canvas = ROOT.TCanvas('www')
+    canvas.cd()
+    root_cf.GetXaxis().SetRangeUser(0.0, 0.3)
+    root_cf.GetYaxis().SetRangeUser(0.88, 1.25)
+    fit_plot = fitres_to_tgraph(fit_res)
+
+    txt = ROOT.TPaveText(0.6, 0.7, 0.87, 0.87, "NDCL")
+    txt.AddText("#lambda %f" % fit_res.params['lam'] )
+    txt.AddText("R_{inv} %f" % fit_res.params['radius'] )
+    root_cf.Draw()
+    fit_plot.Draw("same")
+    txt.Draw()
+
+    canvas.Write(name)
+
+    return canvas
 
 def main(argv):
 
@@ -97,6 +133,10 @@ def main(argv):
     if args.use_ll:
         print("LogLikelihood not implemented for kT-binned fit! Aborting.", file=sys.stderr)
         return
+
+    if args.batch:
+        print("-- Running in batch mode")
+        ROOT.gROOT.SetBatch(True)
 
     # create the femtolist from the input file
     femtolist = Femtolist(args.datafile)
@@ -110,35 +150,49 @@ def main(argv):
     fit_range = args.fit_range.split(':')
     FIT_CLASS = GaussianModelFSI
 
-    for analysis in femtolist:
-        print("\n***", analysis.name)
-        kt_analysis = analysis['KT_Qinv']
-
-        root_cf = analysis['CF']
+    def write_fit(root_cf, title, name):
+        root_cf.SetTitle(title)
         cf = Histogram.BuildFromRootHist(root_cf)
         cf_fit_res = do_qinv_fit(cf, FIT_CLASS, (0, 0.16))
-
+        root_cf.Scale(1.0 / cf_fit_res.params['norm'])
         report_fit(cf_fit_res)
+        save_fit_canvas(root_cf, cf_fit_res, name)
 
-        plot_cf_and_fit(root_cf, cf_fit_res)
+    for analysis in femtolist:
+        print("\n***", analysis.name)
 
-        for x in list(map(ROOT.TKey.ReadObj, kt_analysis.GetListOfKeys())):
-            root_cf = get_root_object(x, 'CF')
-            root_ccf = get_root_object(x, 'cCF')
+        # Set output for this analysis
+        output_dir = output_file.mkdir(analysis.name)
+        output_dir.cd()
 
-            cf = Histogram.BuildFromRootHist(root_cf)
-            corrected_cf = Histogram.BuildFromRootHist(root_ccf)
+        # Get the correlation function
+        write_fit(analysis['CF'],
+                  name='CF_fit',
+                  title="(Uncorrected) CF : %s" % (analysis.title))
+        
+        write_fit(analysis['cCF'],
+                  name='cCF_fit',
+                  title="(Corrected) CF : %s" % (analysis.title))
 
-            cf_fit_res = do_qinv_fit(cf, FIT_CLASS, (0, 0.16))
-            corrected_fit_res = do_qinv_fit(corrected_cf, FIT_CLASS, (0, 0.16))
+        try:
+            kt_analysis = analysis['KT_Qinv']
+        except KeyError:
+            print("-- No KT bins found for %s." % analysis.name)
+            continue
 
-            # pd.DataFrame()
-            # print(res.valuesdict())
-            print()
-            print()
-            report_fit(corrected_fit_res)
-            plot_cf_and_fit(root_ccf, corrected_fit_res)
-            # print(dict(**cf_fit_res.params))
+        
+        kt_bins = tuple((x.GetName(), x.ReadObj()) for x in kt_analysis.GetListOfKeys())
+
+        for name, x in kt_bins:
+            output_dir.mkdir(name).cd()
+
+            write_fit(get_root_object(x, 'CF'),
+                      name='CF_fit',
+                      title="(Uncorrected) CF : %s" % (analysis.title))
+        
+            write_fit(get_root_object(x, 'cCF'),
+                      name='cCF_fit',
+                      title="(Corrected) CF : %s" % (analysis.title))
 
     output_file.Close()
 

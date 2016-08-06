@@ -66,11 +66,22 @@ class Analysis:
         return self._data.GetName()
 
     @property
+    def title(self):
+        x = self.name.split('_')
+        centrality_name = "%d-%d%%" % tuple(map(int, x[1:3]))
+        title = "%s (%s)" % (self.system_name, centrality_name)
+        return title.replace("π", "#pi")
+
+    @property
     def system_name(self):
         """
         Returns the 'friendly' name of the particle system - could be π+, π-
         """
-        pp_info = self.metadata['AliFemtoAnalysisPionPion']
+        if self.metadata:
+            pp_info = self.metadata['AliFemtoAnalysisPionPion']
+        else:
+            suffix = self.name.split('_')[-1]
+            pp_info = {'pion_1_type': 0}
         if pp_info:
             if 'pion_1_type' in pp_info:
                 pion_code = int(pp_info['pion_1_type'])
