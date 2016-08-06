@@ -58,6 +58,8 @@ def do_qinv_fit(ratio, ModelClass, fit_range):
     """
     Do a fit of numerator denominator pairs.
     """
+    if isinstance(ratio, ROOT.TH1):
+         ratio = Histogram.BuildFromRootHist(ratio)
     # ratio = num / den
     qinv_params = ModelClass.guess(ratio)
     fit_slice = ratio.x_axis.get_slice(fit_range)
@@ -150,13 +152,11 @@ def main(argv):
     fit_range = args.fit_range.split(':')
     FIT_CLASS = GaussianModelFSI
 
-    def write_fit(root_cf, title, name):
+    def write_fit(root_cf, fit, title, name):
         root_cf.SetTitle(title)
-        cf = Histogram.BuildFromRootHist(root_cf)
-        cf_fit_res = do_qinv_fit(cf, FIT_CLASS, (0, 0.16))
-        root_cf.Scale(1.0 / cf_fit_res.params['norm'])
-        report_fit(cf_fit_res)
-        save_fit_canvas(root_cf, cf_fit_res, name)
+        root_cf.Scale(1.0 / fit.params['norm'])
+        report_fit(fit)
+        save_fit_canvas(root_cf, fit, name)
 
     for analysis in femtolist:
         print("\n***", analysis.name)
@@ -170,7 +170,10 @@ def main(argv):
                   name='CF_fit',
                   title="(Uncorrected) CF : %s" % (analysis.title))
         
-        write_fit(analysis['cCF'],
+        root_cf = get_root_object(x, 'cCF')
+        ccf_fit_res = do_qinv_fit(root_cf, FIT_CLASS, (0, 0.16))
+        write_fit(root_cf,
+                  ccf_fit_res,
                   name='cCF_fit',
                   title="(Corrected) CF : %s" % (analysis.title))
 
@@ -186,11 +189,17 @@ def main(argv):
         for name, x in kt_bins:
             output_dir.mkdir(name).cd()
 
-            write_fit(get_root_object(x, 'CF'),
+            root_cf = get_root_object(x, 'CF')
+            cf_fit_res = do_qinv_fit(root_cf, FIT_CLASS, (0, 0.16))
+            write_fit(root_cf,
+                      cf_fit_res,
                       name='CF_fit',
                       title="(Uncorrected) CF : %s" % (analysis.title))
         
-            write_fit(get_root_object(x, 'cCF'),
+            root_cf = get_root_object(x, 'cCF')
+            ccf_fit_res = do_qinv_fit(root_cf, FIT_CLASS, (0, 0.16))
+            write_fit(root_cf,
+                      ccf_fit_res,
                       name='cCF_fit',
                       title="(Corrected) CF : %s" % (analysis.title))
 
