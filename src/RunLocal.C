@@ -4,10 +4,6 @@
  * My ROOT macro entry point
  */
 
-bool rungrid = false;
-bool force_exit = false;
-bool is_mc_analysis = false;
-
 #define DEV_LOCAL
 
 #ifndef __CINT__
@@ -34,8 +30,6 @@ using namespace std;
 
 #include <TObjString.h>
 
-//#include "PilamEventCut.h"
-
 void process_arguments();
 
 // std::vector<int> runs;
@@ -44,43 +38,18 @@ std::vector<int>* gBitmap;
 
 TString output_filename = "",
          macro_filename =
-           "$ALICE_PHYSICS/PWGCF/FEMTOSCOPY/macros/Train/PionPionFemto/ConfigFemtoAnalysis.C";
-        //  "ConfigFemtoAnalysis.C";
+          //  "$ALICE_PHYSICS/PWGCF/FEMTOSCOPY/macros/Train/PionPionFemto/ConfigFemtoAnalysis.C";
+         "ConfigFemtoAnalysis.C";
 
-// const TString config = "\"@vertex_bins = 5;{0:5, 0:10:20:30}; +p; +m; ~do_kt_qinv = true;\"";
-// const TString config = "\"\"";
-TString config = "\""
-"+p;"
-"{0:20};"
+// Global Configuration - set by CommonConfig.C
+bool is_mc_analysis;
+bool is_2015_data;
+TString macro_config;
+Int_t collision_trigger;
 
-// "~do_avg_sep_cf = true; "
-"~do_deltaeta_deltaphi_cf = true;"
-"@enable_pair_monitors = false;"
-// "@verbose = true; "
-"@min_coll_size = 1; "
-// "@mult_min = 2000; "
-// "$event_MultMin = 2000; "
-
-"$pion_1_PtMin = 0.14; "
-"$pion_1_PtMax = 2.0; "
-"$pion_1_max_impact_z = 0.15; "
-"$pion_1_max_impact_xy = 0.2; "
-"$pion_1_max_tpc_chi_ndof = 0.013; "
-"$pion_1_max_its_chi_ndof = 0.013; "
-"$pair_delta_eta_min = 0.00; "
-"$pair_delta_phi_min = 0.00; "
-
-"\"";
-
-int use_runs[] = {170163, 0};
-//int use_runs[] = {170593, 170572, 170388, 170387, 0};
-//int use_runs[] = {170593, 170572, 170388, 170387, 170315, 170313, 170312, 0};
-//int use_runs[]   = {170593, 170572, 170388, 170387, 170315, 170313, 170312, 170311, 170309, 170308, 170306, 0};
-// int use_runs[]= {170593, 170572, 170388, 170387, 170315, 170313, 170312, 170311, 170309, 170308, 170306, 170270, 170269, 170268, 170230, 170228, 170207, 170204, 170203, 170193, 170163, 0};
-//  int good_runs[21]={170593, 170572, 170388, 170387, 170315, 170313, 170312, 170311, 170309, 170308, 170306, 170270, 170269, 170268, 170230, 170228, 170207, 170204, 170203, 170193, 170163};
 
 void
-RunMe()
+RunLocal()
 {
   cout << "[RunMe] Begin\n";
 
@@ -102,7 +71,9 @@ RunMe()
   gSystem->Load("libPWGCFfemtoscopy.so");
   gSystem->Load("libPWGCFfemtoscopyUser.so");
 
-  // process_arguments();
+  // get configuration from macro
+  gROOT->LoadMacro("src/CommonConfig.C");
+  CommonConfig();
 
   // Create Analysis Manager
   AliAnalysisManager *mgr = new AliAnalysisManager("mgr", "My Analysis Manager");
@@ -112,15 +83,12 @@ RunMe()
   input_handler->CreatePIDResponse(is_mc_analysis);
   mgr->SetInputEventHandler(input_handler);
 
-  const Int_t collision_trigger = AliVEvent::kINT7;
-
   gROOT->LoadMacro("$ALICE_ROOT/ANALYSIS/macros/AddTaskPIDResponse.C");
   AddTaskPIDResponse(is_mc_analysis);
 
   gROOT->LoadMacro("$ALICE_PHYSICS/OADB/COMMON/MULTIPLICITY/macros/AddTaskMultSelection.C");
   AliMultSelectionTask *mult_task = AddTaskMultSelection();
   mult_task->SetSelectedTriggerClass(collision_trigger);
-  mgr->AddTask(mult_task);
 
   gROOT->LoadMacro("$ALICE_ROOT/ANALYSIS/macros/AddTaskVZEROEPSelection.C");
   AddTaskVZEROEPSelection();
@@ -129,7 +97,7 @@ RunMe()
   AliAnalysisTaskFemto *pipitask = new AliAnalysisTaskFemto(
     "PiPiTask",
     macro_filename,
-    config,
+    macro_config,
     kFALSE
   );
 
