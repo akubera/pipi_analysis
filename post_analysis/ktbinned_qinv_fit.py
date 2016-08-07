@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# post_analysis/qinv_fit.py
+# post_analysis/ktbinned_qinv_fit.py
 #
 
 import sys
@@ -34,6 +34,10 @@ def argument_parser():
                         nargs='?',
                         default='0:0.16',
                         help="Range of normalization")
+    parser.add_argument("--fit-output",
+                        nargs='?',
+                        default=None,
+                        help="File to store fit results")
     parser.add_argument("--output-domain",
                         nargs='?',
                         default='0.0:0.5',
@@ -53,6 +57,19 @@ def argument_parser():
                         help="Output root filename to store results")
     return parser
 
+
+def fitres_to_series(fit_res, **kw):
+    """
+    Creates a pandas data-series from fit results and whatever keyword
+    parameters are given.
+    """
+    kw['norm'] = fit_res.params['norm'].value
+    kw['norm_err'] = fit_res.params['norm'].stderr
+    kw['radius'] = fit_res.params['radius'].value
+    kw['radius_err'] = fit_res.params['radius'].stderr
+    kw['lambda'] = fit_res.params['lam'].value
+    kw['lambda_err'] = fit_res.params['lam'].stderr
+    return pd.Series(kw)
 
 def do_qinv_fit(ratio, ModelClass, fit_range):
     """
@@ -155,8 +172,10 @@ def main(argv):
     def write_fit(root_cf, fit, title, name):
         root_cf.SetTitle(title)
         root_cf.Scale(1.0 / fit.params['norm'])
-        report_fit(fit)
+        # report_fit(fit)
         save_fit_canvas(root_cf, fit, name)
+
+    fit_serieses = []
 
     for analysis in femtolist:
         print("\n***", analysis.name)
@@ -166,11 +185,14 @@ def main(argv):
         output_dir.cd()
 
         # Get the correlation function
-        write_fit(analysis['CF'],
+        root_cf = analysis['CF']
+        cf_fit_res = do_qinv_fit(root_cf, FIT_CLASS, (0, 0.16))
+        write_fit(root_cf,
+                  cf_fit_res,
                   name='CF_fit',
                   title="(Uncorrected) CF : %s" % (analysis.title))
-        
-        root_cf = get_root_object(x, 'cCF')
+
+        root_cf = analysis['cCF']
         ccf_fit_res = do_qinv_fit(root_cf, FIT_CLASS, (0, 0.16))
         write_fit(root_cf,
                   ccf_fit_res,
@@ -183,25 +205,56 @@ def main(argv):
             print("-- No KT bins found for %s." % analysis.name)
             continue
 
-        
+
         kt_bins = tuple((x.GetName(), x.ReadObj()) for x in kt_analysis.GetListOfKeys())
 
         for name, x in kt_bins:
             output_dir.mkdir(name).cd()
 
+            kt_range = tuple(map(float, name.split('_')))
             root_cf = get_root_object(x, 'CF')
             cf_fit_res = do_qinv_fit(root_cf, FIT_CLASS, (0, 0.16))
+            fit_serieses.append(fitres_to_series(cf_fit_res,
+                                                 momentum_corrected=False,
+                                                 kt_range=kt_range,
+                                                 centrality=analysis.centrality_range,
+                                                 ))
             write_fit(root_cf,
                       cf_fit_res,
                       name='CF_fit',
                       title="(Uncorrected) CF : %s" % (analysis.title))
-        
+
             root_cf = get_root_object(x, 'cCF')
             ccf_fit_res = do_qinv_fit(root_cf, FIT_CLASS, (0, 0.16))
+            fit_serieses.append(fitres_to_series(ccf_fit_res,
+                                                 momentum_corrected=True,
+                                                 kt_range=kt_range,
+                                                 centrality=analysis.centrality_range,
+                                                 ))
             write_fit(root_cf,
                       ccf_fit_res,
                       name='cCF_fit',
                       title="(Corrected) CF : %s" % (analysis.title))
+
+    fit_df = pd.DataFrame(fit_serieses)
+    if args.fit_output:
+        print("Writing fit results to %s" % args.fit_output)
+        if args.fit_output.endswith('.pkl'):
+            fit_df.to_pickle(args.fit_output)
+
+        elif args.fit_output.endswith('.json'):
+            fit_df.to_json(args.fit_output)
+
+        elif args.fit_output.endswith('.h5'):
+            from pytables import HDFStore
+            with HDFStore(args.fit_output) as store:
+                store['fit'] = fit_df
+
+        elif args.fit_output.endswith('.mpack'):
+            fit_df.to_msgpack(args.fit_output)
+
+        else:
+            fit_df.to_csv(args.fit_output)
 
     output_file.Close()
 

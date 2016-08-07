@@ -68,9 +68,13 @@ class Analysis:
     @property
     def title(self):
         x = self.name.split('_')
-        centrality_name = "%d-%d%%" % tuple(map(int, x[1:3]))
+        centrality_name = "%d-%d%%" % self.centrality_range
         title = "%s (%s)" % (self.system_name, centrality_name)
         return title.replace("π", "#pi")
+
+    @property
+    def centrality_range(self):
+        return tuple(map(float, self.name.split('_')[1:3]))
 
     @property
     def system_name(self):
