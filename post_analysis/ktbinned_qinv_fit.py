@@ -128,15 +128,15 @@ def save_fit_canvas(root_cf, fit_res, name, normalized=True):
         fit_res = copy(fit_res)
         fit_res.params['norm'].value = 1.0
 
-    canvas = ROOT.TCanvas('www')
+    canvas = ROOT.TCanvas()
     canvas.cd()
     root_cf.GetXaxis().SetRangeUser(0.0, 0.3)
     root_cf.GetYaxis().SetRangeUser(0.88, 1.25)
     fit_plot = fitres_to_tgraph(fit_res)
 
     txt = ROOT.TPaveText(0.6, 0.7, 0.87, 0.87, "NDCL")
-    txt.AddText("#lambda %f" % fit_res.params['lam'] )
     txt.AddText("R_{inv} %f" % fit_res.params['radius'] )
+    txt.AddText("#lambda %f" % fit_res.params['lam'] )
     root_cf.Draw()
     fit_plot.Draw("same")
     txt.Draw()
@@ -212,6 +212,8 @@ def main(argv):
             output_dir.mkdir(name).cd()
 
             kt_range = tuple(map(float, name.split('_')))
+
+            title = '%s - kT : %s' % (analysis.title, '%0.1f-%0.1f' % kt_range)
             root_cf = get_root_object(x, 'CF')
             cf_fit_res = do_qinv_fit(root_cf, FIT_CLASS, (0, 0.16))
             fit_serieses.append(fitres_to_series(cf_fit_res,
@@ -222,7 +224,7 @@ def main(argv):
             write_fit(root_cf,
                       cf_fit_res,
                       name='CF_fit',
-                      title="(Uncorrected) CF : %s" % (analysis.title))
+                      title="(Uncorrected) CF : %s" % (title))
 
             root_cf = get_root_object(x, 'cCF')
             ccf_fit_res = do_qinv_fit(root_cf, FIT_CLASS, (0, 0.16))
@@ -234,7 +236,7 @@ def main(argv):
             write_fit(root_cf,
                       ccf_fit_res,
                       name='cCF_fit',
-                      title="(Corrected) CF : %s" % (analysis.title))
+                      title="(Corrected) CF : %s" % (title))
 
     fit_df = pd.DataFrame(fit_serieses)
     if args.fit_output:
