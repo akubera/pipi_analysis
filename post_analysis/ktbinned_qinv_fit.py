@@ -32,7 +32,7 @@ def argument_parser():
                         help="Run in batch mode (no plots draw)")
     parser.add_argument("--fit-range",
                         nargs='?',
-                        default='0:0.16',
+                        default='0:0.09',
                         help="Range of normalization")
     parser.add_argument("--fit-output",
                         nargs='?',
@@ -78,7 +78,7 @@ def do_qinv_fit(ratio, ModelClass, fit_range):
     if isinstance(ratio, ROOT.TH1):
          ratio = Histogram.BuildFromRootHist(ratio)
     # ratio = num / den
-    qinv_params = ModelClass.guess(ratio)
+    qinv_params = ModelClass.guess()
     fit_slice = ratio.x_axis.get_slice(fit_range)
 
     y = ratio.data[fit_slice]
@@ -94,7 +94,7 @@ def do_qinv_fit(ratio, ModelClass, fit_range):
     return qinv_fit
 
 
-def fitres_to_tgraph(fit_res, domain=(0.0, 0.16), npoints=300, ModelClass=GaussianModelFSI):
+def fitres_to_tgraph(fit_res, domain=(0.0, 0.09), npoints=300, ModelClass=GaussianModelFSI):
     FIT_X = np.linspace(*domain, num=300)
     FIT_Y = ModelClass().eval(fit_res.params, x=FIT_X)
     # FIT_Y = GaussianModelFSI.gauss(FIT_X, normalized=True, **fit_res.params)
@@ -166,13 +166,13 @@ def main(argv):
         args.output_filename = basename + ".kt_qinv." + ext
 
     output_file = ROOT.TFile(args.output_filename, 'RECREATE')
-    fit_range = args.fit_range.split(':')
+    fit_range = tuple(map(float, args.fit_range.split(':')))
     FIT_CLASS = GaussianModelFSI
 
     def write_fit(root_cf, fit, title, name):
         root_cf.SetTitle(title)
         root_cf.Scale(1.0 / fit.params['norm'])
-        # report_fit(fit)
+        report_fit(fit)
         save_fit_canvas(root_cf, fit, name)
 
     fit_serieses = []
@@ -186,14 +186,14 @@ def main(argv):
 
         # Get the correlation function
         root_cf = analysis['CF']
-        cf_fit_res = do_qinv_fit(root_cf, FIT_CLASS, (0, 0.16))
+        cf_fit_res = do_qinv_fit(root_cf, FIT_CLASS, fit_range)
         write_fit(root_cf,
                   cf_fit_res,
                   name='CF_fit',
                   title="(Uncorrected) CF : %s" % (analysis.title))
 
         root_cf = analysis['cCF']
-        ccf_fit_res = do_qinv_fit(root_cf, FIT_CLASS, (0, 0.16))
+        ccf_fit_res = do_qinv_fit(root_cf, FIT_CLASS, fit_range)
         write_fit(root_cf,
                   ccf_fit_res,
                   name='cCF_fit',
@@ -215,9 +215,9 @@ def main(argv):
 
             title = '%s - kT : %s' % (analysis.title, '%0.1f-%0.1f' % kt_range)
             root_cf = get_root_object(x, 'CF')
-            cf_fit_res = do_qinv_fit(root_cf, FIT_CLASS, (0, 0.16))
+            cf_fit_res = do_qinv_fit(root_cf, FIT_CLASS, fit_range)
             fit_serieses.append(fitres_to_series(cf_fit_res,
-                                                 momentum_corrected=False,
+                                                 momentum_corrected=false,
                                                  kt_range=kt_range,
                                                  centrality=analysis.centrality_range,
                                                  ))
@@ -227,7 +227,7 @@ def main(argv):
                       title="(Uncorrected) CF : %s" % (title))
 
             root_cf = get_root_object(x, 'cCF')
-            ccf_fit_res = do_qinv_fit(root_cf, FIT_CLASS, (0, 0.16))
+            ccf_fit_res = do_qinv_fit(root_cf, FIT_CLASS, fit_range)
             fit_serieses.append(fitres_to_series(ccf_fit_res,
                                                  momentum_corrected=True,
                                                  kt_range=kt_range,
