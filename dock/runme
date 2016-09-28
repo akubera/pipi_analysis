@@ -1,0 +1,22 @@
+#!/bin/sh
+
+docker run --rm -it \
+        -v $HOME/.alice:$HOME/.alice \
+        -v $HOME/.globus:$HOME/.globus \
+        -v $HOME/development/physics/pipi_analysis:$HOME/analysis \
+        aliroot-installed \
+        /bin/bash
+
+
+
+##!/usr/bin/env python3.5
+##
+## runme... setup and execute docker files
+#
+#
+#from sh import docker
+#
+#
+
+
+
