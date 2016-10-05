@@ -33,7 +33,7 @@ def argument_parser():
     parser.add_argument("--fit-range",
                         nargs='?',
                         default='0:0.09',
-                        help="Range of normalization")
+                        help="Range of fit")
     parser.add_argument("--fit-output",
                         nargs='?',
                         default=None,
@@ -95,7 +95,7 @@ def do_qinv_fit(ratio, ModelClass, fit_range):
 
 
 def fitres_to_tgraph(fit_res, domain=(0.0, 0.09), npoints=300, ModelClass=GaussianModelFSI):
-    FIT_X = np.linspace(*domain, num=300)
+    FIT_X = np.linspace(*domain, num=npoints)
     FIT_Y = ModelClass().eval(fit_res.params, x=FIT_X)
     # FIT_Y = GaussianModelFSI.gauss(FIT_X, normalized=True, **fit_res.params)
     return ROOT.TGraph(len(FIT_X), FIT_X, FIT_Y)
@@ -204,7 +204,10 @@ def main(argv):
         except KeyError:
             print("-- No KT bins found for %s." % analysis.name)
             continue
-
+        else:
+            if kt_analysis == None:
+                print("-- No KT bins found for %s." % analysis.name)
+                continue
 
         kt_bins = tuple((x.GetName(), x) for x in kt_analysis)
 
@@ -217,10 +220,10 @@ def main(argv):
 
             r_num = get_root_object(x, analysis.QINV_NUM_PATH)
             r_den = get_root_object(x, analysis.QINV_DEN_PATH)
-            root_cf = r_num.Clone()
+            root_cf = r_num.Clone("cf")
             root_cf.Divide(r_den)
             # root_cf =  'CF'
-
+            root_cf.Write()
             cf_fit_res = do_qinv_fit(root_cf, FIT_CLASS, fit_range)
             fit_serieses.append(fitres_to_series(cf_fit_res,
                                                  momentum_corrected=False,
@@ -232,6 +235,9 @@ def main(argv):
                       fit_range,
                       name='CF_fit',
                       title="(Uncorrected) CF : %s" % (title))
+            normalized_root_cf = root_cf.Clone("cf_normalized")
+            normalized_root_cf.Scale(1.0 / cf_fit_res.params['norm'].value)
+            normalized_root_cf.Write()
 
     fit_df = pd.DataFrame(fit_serieses)
     if args.fit_output:
