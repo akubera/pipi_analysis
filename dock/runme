@@ -4,6 +4,7 @@ docker run --rm -it \
         -v $HOME/.alice:$HOME/.alice \
         -v $HOME/.globus:$HOME/.globus \
         -v $HOME/development/physics/pipi_analysis:$HOME/analysis \
+	-v /alice:/alice  \
         aliroot-installed \
         /bin/bash
 
