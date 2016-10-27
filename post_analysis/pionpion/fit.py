@@ -43,7 +43,7 @@ def fitfunc_qinv_gauss(params, q, data=None):
     #             for i in range(0, shape[0], 2))
 
     resid = model - data[0]
-    res = np.sqrt( resid ** 2 / data[1] ** 2 )
+    res = np.sqrt(resid ** 2 / data[1] ** 2)
     return res
 
 
@@ -162,8 +162,9 @@ def fitfunc_3d(params, q, data=None):
     observed, err = data[:2]
 
     # get residual result
-    res = np.sqrt((model - observed) ** 2 / err ** 2)
-
+    res = np.zeros(observed.shape)
+    zero_mask = err != 0.0
+    res[zero_mask] = np.sqrt((model[zero_mask] - observed[zero_mask]) ** 2 / err[zero_mask] ** 2)
     return res
 
 
@@ -229,5 +230,5 @@ def fitfunc_3d_with_offdiagonal_terms(params, q, data=None):
 
     # get residual result
     res = np.sqrt((model - observed) ** 2 / err ** 2)
-
+    res = np.nan_to_num(res)
     return res
