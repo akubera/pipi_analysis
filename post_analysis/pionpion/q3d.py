@@ -6,7 +6,6 @@ Module with classes and functions for dealing with the three dimentional
 histograms containing Q_out Q_side Q_long particle data
 """
 
-import root_numpy
 import numpy as np
 import numpy.ma as ma
 from itertools import starmap
@@ -23,6 +22,11 @@ class Q3D:
         self.num = Histogram.BuildFromRootHist(numerator)
         self.den = Histogram.BuildFromRootHist(denominator)
 
+        ratio = numerator.Clone("ratio")
+        ratio.Divide(denominator)
+        self.ratio = Histogram.BuildFromRootHist(ratio)
+        # self.ratio.errors = np.sqrt(self.ratio.data)
+
         assert self.num.shape == self.den.shape
         assert all(n[i] == d[i]
                    for n, d in zip(self.num.axes, self.den.axes)
@@ -30,7 +34,7 @@ class Q3D:
 
 
         if do_sanity_check:
-            sanity_bins = self.num.getslice((-.1, .1), (-.1, .1), (-.1, .1))
+            sanity_bins = self.num.get_slice((-.1, .1), (-.1, .1), (-.1, .1))
             sanity_data = np.array([
                 self.num[x, y, z]
                 for x in range(sanity_bins[0].start, sanity_bins[0].stop)
@@ -41,11 +45,21 @@ class Q3D:
             assert all(self.num[sanity_bins].flatten() == sanity_data)
 
         # store domain
-        self.ratio_data = self.num.data / self.den.data
-        self.ratio_err = self.num.error / self.den.error
-
-        self.ratio = self.num / self.den
-        assert (self.ratio.data == self.ratio_data).all()
+        # ratio = self.num / self.den
+        self.ratio_data = np.nan_to_num(self.ratio.data)  # self.num.data / self.den.data
+        self.ratio_err = np.nan_to_num(self.ratio.errors)  # self.num.error / self.den.error
+        #
+        # self.ratio = np.nan_to_num(self.num / self.den)
+        # self.ratio.data = self.ratio_data
+        # # self.ratio.data = self.ratio_data
+        #
+        # self.ratio._ptr = numerator.Clone("_ptr")
+        # self.ratio._ptr.Divide(numerator, denominator)
+        self.num._ptr = numerator
+        self.den._ptr = denominator
+        self.ratio._ptr = ratio
+        # print(self.ratio.data - self.ratio_data)
+        assert (self.ratio.data == self.ratio_data).all(), "Error %f" % (np.max(self.ratio.data - self.ratio_data))
 
     def bins_to_slices(self,
                        x_domain=(None, None),
@@ -76,27 +90,30 @@ class Q3D:
             return slice(*bins)
 
         domain_tuples = (x_domain, y_domain, z_domain)
-        slices = tuple(starmap(dom_to_slice, zip(self._axes, domain_tuples)))
-        print("slices:", slices)
+        slices = tuple(starmap(dom_to_slice, zip(self.num.axes, domain_tuples)))
         return slices
 
-    def projection_out(self, y_domain=(-.01, 0.5), z_domain=(-.01, 0.1)):
+    def projection_out(self, y_domain=(-0.1, 0.1), z_domain=(-0.1, 0.1)):
         """
         Returns a numpy array of the entire 'out' axis, with the other two axes
         restricted by the parameters
         """
         # change domains into array slices
-        x_slice, y_slice, z_slice = self.bins_to_slices(
-            y_domain=y_domain,
-            z_domain=z_domain
-        )
+        # x_slice, y_slice, z_slice = self.bins_to_slices(
+        #     y_domain=y_domain,
+        #     z_domain=z_domain
+        # )
+        # x_slice = self.bins_to_slices
+        #
+        # num_slice = self.num[x_slice, y_slice, z_slice]
+        # den_slice = self.den[x_slice, y_slice, z_slice]
+        # self.get_projection()
+        # data = num_slice / den_slice
+        # # print("Sliced data", data.shape)
+        # # print(data)
+        # sum = data.sum(axis=(1, 2))
 
-        num_slice = self.num[x_slice, y_slice, z_slice]
-        den_slice = self.den[x_slice, y_slice, z_slice]
-        self.get_projection()
-        data = num_slice / den_slice
-        # print("Sliced data", data.shape)
-        # print(data)
+        data = self.ratio[:,y_domain,z_domain]
         sum = data.sum(axis=(1, 2))
         return sum
 
@@ -105,13 +122,13 @@ class Q3D:
         Returns a numpy array of the entire 'side' axis, with the other two
         axes restricted by the parameters
         """
-        x_slice, y_slice, z_slice = self.bins_to_slices(
-            x_domain=x_domain,
-            z_domain=z_domain
-        )
-
-        data = self.data[x_slice, y_slice, z_slice]
+        data = self.ratio[x_domain,:,z_domain]
         sum = data.sum(axis=(0, 2))
+        return sum
+
+    def projection_long(self, x_domain=(-0.1, 0.1), y_domain=(-0.1, 0.1)):
+        data = self.ratio[x_domain,y_domain,:]
+        sum = data.sum(axis=(1, 2))
         return sum
 
     def get_projection(self, x_slice, y_slice, z_slice, summed_axes):
