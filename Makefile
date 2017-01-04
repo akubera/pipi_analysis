@@ -13,7 +13,7 @@ ALIROOT = aliroot
 all:
 
 
-run: src/RunMe.C
+run: RunMe.C
 	aliroot -q -x $< 2
 
 multi_run:
@@ -27,6 +27,9 @@ multi_run_11:
 
 run_grid: RunGrid.C
 	aliroot -q -x $<
+
+run-mc:
+	aliroot -q -x src/RunMC.C
 
 %.C: src/%.C
 	cp $< $@
