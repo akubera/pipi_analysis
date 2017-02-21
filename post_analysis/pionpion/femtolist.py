@@ -17,6 +17,9 @@ class Femtolist:
     FEMTOLIST_PATHS = [
         'femtolist',
         'PWG2FEMTO.femtolist',
+        'PWG2FEMTO.pionpion_femtolist',
+
+        'PWG2FEMTO',
     ]
 
     def __init__(self, file):
