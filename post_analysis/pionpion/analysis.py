@@ -28,7 +28,7 @@ class Analysis:
     KT_BINNED_ANALYSIS_PATH = ['KT_Qinv']
 
     def __init__(self, analysis_obj):
-        if isinstance(analysis_obj, TObjArray):
+        if isinstance(analysis_obj, (TList, TObjArray)):
             pass
         elif isinstance(analysis_obj, TDirectory):
             array = TObjArray()
@@ -37,11 +37,14 @@ class Analysis:
                 array.Add(k.ReadObj())
             analysis_obj = array
         else:
-            raise ValueError("Analysis expected TObjArray or TDirectory "
+            raise ValueError("Analysis expected TObjArray, TList, or TDirectory "
                              "initialization value. Found %r." % (analysis_obj))
 
         self._data = analysis_obj
         self.metadata = Analysis.load_metadata(self._data.Last())
+
+    def __iter__(self):
+        yield from self._data
 
     def __getattr__(self, name):
         """
