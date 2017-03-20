@@ -1,7 +1,7 @@
 /**
- * RunMe.C
+ * RunLocal.C
  *
- * My ROOT macro entry point
+ * ROOT macro for running over local data
  */
 
 #define DEV_LOCAL
@@ -19,6 +19,7 @@
 #include <AliAODInputHandler.h>
 #include <AliAnalysisTaskSE.h>
 #include <AliAnalysisTaskFemto.h>
+#include <AliMultSelectionTask.h>
 
 #include <vector>
 #include <iostream>
@@ -34,16 +35,27 @@ void process_arguments();
 
 // std::vector<int> runs;
 std::set<int> runs;
-std::vector<int>* gBitmap;
 
 TString output_filename = "",
          macro_filename =
-          //  "$ALICE_PHYSICS/PWGCF/FEMTOSCOPY/macros/Train/PionPionFemto/ConfigFemtoAnalysis.C";
-         "ConfigFemtoAnalysis.C";
+         "$ALICE_PHYSICS/PWGCF/FEMTOSCOPY/macros/Train/PionPionFemto/ConfigFemtoAnalysisRun2.C";
+        //  "ConfigFemtoAnalysis.C";
+
+int data_year =
+  // 2010;
+  // 2011;
+  2015;
+
+bool ignore_xml = true;
+TString xml_filename = ignore_xml ? "" : "/alice/cern.ch/user/a/akubera/xml/"
+        // "pp.0";
+        // "runlist_15_00.xml";
+        "15o.m00.xml";
+        // "m00";
+
 
 // Global Configuration - set by CommonConfig.C
 bool is_mc_analysis;
-bool is_2015_data;
 TString macro_config;
 Int_t collision_trigger;
 
@@ -75,6 +87,12 @@ RunLocal()
   gROOT->LoadMacro("src/CommonConfig.C");
   CommonConfig();
 
+  std::cout << "CONFIG\n" << macro_config << "\n\n---\n";
+
+  if (data_year == 2015) {
+    collision_trigger = AliVEvent::kINT7;
+  }
+
   // Create Analysis Manager
   AliAnalysisManager *mgr = new AliAnalysisManager("mgr", "My Analysis Manager");
 
@@ -86,19 +104,21 @@ RunLocal()
   gROOT->LoadMacro("$ALICE_ROOT/ANALYSIS/macros/AddTaskPIDResponse.C");
   AddTaskPIDResponse(is_mc_analysis);
 
-  gROOT->LoadMacro("$ALICE_PHYSICS/OADB/COMMON/MULTIPLICITY/macros/AddTaskMultSelection.C");
-  AliMultSelectionTask *mult_task = AddTaskMultSelection();
-  mult_task->SetSelectedTriggerClass(collision_trigger);
+  if (data_year == 2015) {
+    gROOT->LoadMacro("$ALICE_PHYSICS/OADB/COMMON/MULTIPLICITY/macros/AddTaskMultSelection.C");
+    AliMultSelectionTask * mult_task = AddTaskMultSelection();
+    mult_task->SetSelectedTriggerClass(collision_trigger);
+  }
 
-  gROOT->LoadMacro("$ALICE_ROOT/ANALYSIS/macros/AddTaskVZEROEPSelection.C");
-  AddTaskVZEROEPSelection();
+  // gROOT->LoadMacro("$ALICE_ROOT/ANALYSIS/macros/AddTaskVZEROEPSelection.C");
+  // AddTaskVZEROEPSelection();
 
   // Create the AliFemto task using configuration from ConfigFemtoAnalysis.C
   AliAnalysisTaskFemto *pipitask = new AliAnalysisTaskFemto(
     "PiPiTask",
     macro_filename,
     macro_config,
-    kFALSE
+    kTRUE
   );
 
   pipitask->SelectCollisionCandidates(collision_trigger);
@@ -132,8 +152,8 @@ RunLocal()
 
   mgr->PrintStatus();
 
-  TChain *input_files =
-    load_file_set();
+  TChain *input_files = load_sim_LHC15k1a1(); //  load_sim_LHC16g1(); //(data_year == 2015) ? (is_mc_analysis ? load_2015_sim() : load_2015_data())
+                                              // :  load_file_set();
     //load_files(new TChain("aodTree"));
 
   mgr->StartAnalysis("local", input_files);
@@ -151,26 +171,18 @@ load_files(TChain *input_files = NULL)
   }
 
   if (is_mc_analysis) {
+      input_files->Add("/alice/sim/2015/LHC15k1a1/244975/001/AliAOD.root");
+      input_files->Add("/alice/sim/2015/LHC15k1a1/244975/002/AliAOD.root");
+      input_files->Add("/alice/sim/2015/LHC15k1a1/244975/029/AliAOD.root");
 
-      input_files->Add("/alice/sim/2012/LHC12a17a_fix/170593/AOD149/0001/AliAOD.root");
-      input_files->Add("/alice/sim/2012/LHC12a17a_fix/170593/AOD149/0002/AliAOD.root");
-      input_files->Add("/alice/sim/2012/LHC12a17a_fix/170593/AOD149/0003/AliAOD.root");
-      input_files->Add("/alice/sim/2012/LHC12a17a_fix/170593/AOD149/0004/AliAOD.root");
-      input_files->Add("/alice/sim/2012/LHC12a17a_fix/170593/AOD149/0005/AliAOD.root");
-      input_files->Add("/alice/sim/2012/LHC12a17a_fix/170593/AOD149/0006/AliAOD.root");
-      input_files->Add("/alice/sim/2012/LHC12a17a_fix/170593/AOD149/0007/AliAOD.root");
-      input_files->Add("/alice/sim/2012/LHC12a17a_fix/170593/AOD149/0008/AliAOD.root");
-      input_files->Add("/alice/sim/2012/LHC12a17a_fix/170593/AOD149/0009/AliAOD.root");
-      input_files->Add("/alice/sim/2012/LHC12a17a_fix/170593/AOD149/0010/AliAOD.root");
-      input_files->Add("/alice/sim/2012/LHC12a17a_fix/170593/AOD149/0011/AliAOD.root");
-      input_files->Add("/alice/sim/2012/LHC12a17a_fix/170593/AOD149/0012/AliAOD.root");
-      input_files->Add("/alice/sim/2012/LHC12a17a_fix/170593/AOD149/0013/AliAOD.root");
-      input_files->Add("/alice/sim/2012/LHC12a17a_fix/170593/AOD149/0014/AliAOD.root");
-      input_files->Add("/alice/sim/2012/LHC12a17a_fix/170593/AOD149/0015/AliAOD.root");
-      input_files->Add("/alice/sim/2012/LHC12a17a_fix/170593/AOD149/0016/AliAOD.root");
-      input_files->Add("/alice/sim/2012/LHC12a17a_fix/170593/AOD149/0017/AliAOD.root");
+      return input_files;
 
-      input_files->Add("/alice/sim/2012/LHC12a17a_fix/170593/AOD149/0034/AliAOD.root");
+      int numbers[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 34, 0};
+      for (int *num_ptr = numbers, number = *num_ptr; number > 0; number = *++num_ptr) {
+        const TString filename = TString::Format("/alice/sim/2012/LHC12a17a_fix/170593/AOD149/%04d/AliAOD.root", number);
+        std::cout << " Adding: " << filename << "\n";
+        input_files->Add(filename);
+      }
 
       ///alice/data/2011/LHC11h_2/000169506/ESDs/pass2/AOD145/1226/AliAOD.root");
       // input_files->Add("/alice/sim/2012/LHC12a17d_fix/170593/AOD149/0002/AliAOD.root");
@@ -240,7 +252,7 @@ load_files(TChain *input_files = NULL)
 }
 
 TChain*
-load_file_set(TChain *input_files = NULL)
+load_file_set(TChain *input_files=NULL)
 {
   if (!input_files) {
     input_files = new TChain("aodTree");
@@ -265,6 +277,99 @@ load_file_set(TChain *input_files = NULL)
   for (int i = start; i < stop; ++i) {
     cout << TString::Format(fmt, i) << "\n";
     input_files->Add(TString::Format(fmt, i));
+  }
+
+  return input_files;
+}
+
+
+TChain*
+load_2015_data(TChain *input_files=NULL)
+{
+  if (!input_files) {
+    input_files = new TChain("aodTree");
+  }
+
+  input_files->Add("/alice/data/2015/LHC15o/000246001/pass1/AOD/001/AliAOD.root");
+  input_files->Add("/alice/data/2015/LHC15o/000246001/pass1/AOD/002/AliAOD.root");
+  input_files->Add("/alice/data/2015/LHC15o/000246001/pass1/AOD/003/AliAOD.root");
+
+  // input_files->Add("/alice/data/2015/LHC15o/000246390/pass2_lowIR/AOD/001/AliAOD.root");
+
+  // input_files->Add("/alice/data/2015/LHC15o/000246984/pass1/AOD/001/AliAOD.root");
+  // input_files->Add("/alice/data/2015/LHC15o/000244918/pass1/AOD/041/AliAOD.root");
+  return input_files;
+}
+
+TChain*
+load_2015_sim(TChain *input_files=NULL)
+{
+  if (!input_files) {
+    input_files = new TChain("aodTree");
+  }
+
+  input_files->Add("/alice/sim/2015/LHC15k1a1/244975/001/AliAOD.root");
+  input_files->Add("/alice/sim/2015/LHC15k1a1/244975/002/AliAOD.root");
+  input_files->Add("/alice/sim/2015/LHC15k1a1/244975/029/AliAOD.root");
+  return input_files;
+}
+
+
+TChain*
+load_sim_LHC16k3b2(TChain *input_files=NULL)
+{
+    if (!input_files) {
+    input_files = new TChain("aodTree");
+  }
+
+  // std::vector<int> numbers = {1, 2, 3, 4, 5, 6, 999};
+  // for (int number : numbers) {
+
+  int numbers[] =  {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 24, 999, 17149, 0};
+  for (int *num_ptr = numbers, number = *num_ptr; number > 0; number = *++num_ptr) {
+    const TString filename = TString::Format("/alice/sim/2016/LHC16k3b2/246751/%03d/AliAOD.root", number);
+    std::cout << " Adding: " << filename << "\n";
+    input_files->Add(filename);
+  }
+
+  return input_files;
+
+}
+
+TChain*
+load_sim_LHC16g1(TChain *input_files=NULL)
+{
+    if (!input_files) {
+    input_files = new TChain("aodTree");
+  }
+
+  // std::vector<int> numbers =  {1, 2, 3, 4, 5};
+  // for (int number : numbers) {
+
+  int numbers[] =  {1, 2, 3, 4, 5, 11, 20, 29, 33, 38, 45, 49, 70, 0};
+  // int numbers[] =  {1, 2, 3, 4, 5, 0};
+  for (int *num_ptr = numbers, number = *num_ptr; number > 0; number = *++num_ptr) {
+    const TString filename = TString::Format("/alice/sim/2016/LHC16g1/245505/AOD/%03d/AliAOD.root", number);
+    std::cout << " Adding: " << filename << "\n";
+    input_files->Add(filename);
+  }
+
+  return input_files;
+}
+
+
+TChain*
+load_sim_LHC15k1a1(TChain *input_files=NULL)
+{
+  if (!input_files) {
+     input_files = new TChain("aodTree");
+  }
+
+  int numbers[] = {11, 800, 0};
+  for (int *num_ptr = numbers, number = *num_ptr; number > 0; number = *++num_ptr) {
+    const TString filename = TString::Format("/alice/sim/2015/LHC15k1a1/245064/AOD/%03d/AliAOD.root", number);
+    std::cout << " Adding: " << filename << "\n";
+    input_files->Add(filename);
   }
 
   return input_files;

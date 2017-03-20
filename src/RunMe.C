@@ -40,7 +40,6 @@ void process_arguments();
 
 // std::vector<int> runs;
 std::set<int> runs;
-std::vector<int>* gBitmap;
 
 TString output_filename = "",
          macro_filename =
@@ -51,11 +50,11 @@ TString output_filename = "",
 // const TString config = "\"\"";
 TString config = "\""
 "+p;"
-"{0:20};"
+"{0:14};"
 
 // "~do_avg_sep_cf = true; "
 "~do_deltaeta_deltaphi_cf = true;"
-"@enable_pair_monitors = false;"
+"@enable_pair_monitors = true;"
 // "@verbose = true; "
 "@min_coll_size = 1; "
 // "@mult_min = 2000; "
@@ -67,8 +66,8 @@ TString config = "\""
 "$pion_1_max_impact_xy = 0.2; "
 "$pion_1_max_tpc_chi_ndof = 0.013; "
 "$pion_1_max_its_chi_ndof = 0.013; "
-"$pair_delta_eta_min = 0.00; "
-"$pair_delta_phi_min = 0.00; "
+"$pair_delta_eta_min = 0.026; "
+"$pair_delta_phi_min = 0.045; "
 
 "\"";
 
@@ -144,6 +143,12 @@ RunMe()
       d.GetTime());
   }
 
+  // char i[5] = {0};
+  // std::cout << "It's working! ";
+  // std::cin >> (int)i;
+  // std::cout << std::string(i) << "\n";
+  // std::cout << i[0] << i[1] << i[2] << i[3] << "\n";
+  // std::cin >> (int)i;
 
   AliAnalysisDataContainer *femtolist = mgr->CreateContainer(
     "femtolist",

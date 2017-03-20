@@ -3,10 +3,10 @@
 #
 
 import itertools
+from collections import defaultdict
 
 from stumpy import Histogram
-from collections import defaultdict
-from .root_helpers import get_root_object
+from stumpy.utils import get_root_object
 from ROOT import (
     TObjArray,
     TObjString,
@@ -108,7 +108,6 @@ class Analysis:
         def tree(): return defaultdict(tree)
         analysis_meta = tree()
 
-        analysis_meta
         for s in str(settings).split("\n")[1:-1]:
             k, v = s.split('=')
             keys = k.split('.')

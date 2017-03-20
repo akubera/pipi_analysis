@@ -71,7 +71,7 @@ bool is_mc_analysis;
 TString macro_config;
 Int_t collision_trigger;
 
-TString aliphysics_version = "vAN-20170214-1";
+TString aliphysics_version = "vAN-20170221-1";
 
 TString output_filename = "PiPi_Analysis_Results.root";
 TString xml_filename =
@@ -80,8 +80,11 @@ TString xml_filename =
   // "15o.m00.xml";
   // "m00";
   // "LHC17a1a.xml";
-
-const TString dataset_name = "LHC11h_AOD145-FemtoMinus-1";
+  
+const TString dataset_name =
+  "LHC15o_pass1_pidfix";
+// "LHC15o_pass1-1";
+// "LHC15o_pass2_lowIR";
 
 void
 RunEtaGrid()
@@ -99,7 +102,9 @@ RunEtaGrid()
   gROOT->LoadMacro("src/CommonConfig.C");
   CommonConfig();
 
-  subdir = TString::Format("%06d", date.GetTime());
+  macro_config = "\"+p; {0:5:10:20:30:50:70}; ~do_deltaeta_deltaphi_cf=true;  ~do_kt_qinv=true; ~do_trueq_cf=false; ~do_kt_q3d=false;  ~qinv_bin_size_MeV=2.5;  @is_mc_analysis = false; @enable_pair_monitors = false; @output_settings = false;  @min_coll_size = 100; @num_events_to_mix = 2; $pair_delta_eta_min = 0.00;  $pair_delta_phi_min = 0.00;  $pion_1_PtMin = 0.14;  $pion_1_PtMax = 2.0;  $pion_1_max_impact_z = 3.0; $pion_1_max_impact_xy = 2.4; $pion_1_max_tpc_chi_ndof = 3.010;   $pion_1_max_its_chi_ndof = 3.010;              " "\"";
+
+ subdir = TString::Format("%06d", date.GetTime());
   // subdir = "220409";
 //   data_year
 

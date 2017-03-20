@@ -79,7 +79,7 @@ def hist_method_to_array(hist, func):
     return np.array(list(map(func, range(1, nbins))))
 
 
-def get_ratio(name, num, den, norm_x_ranges, *, cache=True):
+def get_ratio(name, num, den, norm_x_ranges, cache=True):
     """
     Returns the normalized ratio of the two histograms
     """

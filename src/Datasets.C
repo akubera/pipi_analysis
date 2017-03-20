@@ -1,4 +1,4 @@
-///
+ ///
 /// \file src/Datasets.C
 ///
 
@@ -86,11 +86,20 @@ void SetupAlienPaths(AliAnalysisAlien &alien, const TString &name)
     data_dir = "/alice/data/2014/LHC14o";
     data_pattern = "*/pass0_pidfix/AOD/*/AliAOD.root";
   } 
+  
+  else if (name == "LHC15o_pass1-1") {
+    data_dir = "/alice/data/2015/LHC15o";
+    data_pattern = "*/pass1/AOD/*/AliAOD.root";
+  }
+
   else if (name == "LHC15o_pass1_pidfix") {
     data_dir = "/alice/data/2015/LHC15o";
     data_pattern = "*/pass1_pidfix/AOD/*/AliAOD.root";
   }
-  else if (name.BeginsWith("LHC11h_AOD145")) { // (name == "LHC11h_AOD145-FemtoMinus") {
+  else if (name == "LHC15o_pass2_lowIR") {
+    data_dir = "/alice/data/2015/LHC15o";
+    data_pattern = "*/pass2_lowIR/AOD/*/AliAOD.root";
+  } else if (name.BeginsWith("LHC11h_AOD145")) { // (name == "LHC11h_AOD145-FemtoMinus") {
     data_dir = "/alice/data/2011/LHC11h_2";
     data_pattern = "*/ESDs/pass2/AOD145/*/AliAOD.root";
   }
@@ -161,6 +170,24 @@ std::set<int> runs_from_dataset_name(const TString &name)
 	    170593};
   }
   
+  else if (name == "LHC15o_pass2_lowIR") {
+    runs = {244917, 244918, 244975, 244980, 244982, 244983, 245061, 245064, 
+	    245066, 245068, 246390, 246391, 246392};
+  }
+  
+  else if (name == "LHC15o_pass1-1") {
+    runs = {245683, 245692, 245700, 245702};  // , 245705, 245729, 245731, 245738};
+    //, 245752, 245759,
+    // 245766, 245775, 245785, 245793, 245829, 245831, 245833, 245923, 245949, 245952, 245954, 245963, 
+    
+  }
+ 
+  else if (name == "LHC15o_pass1_pidfix") {
+    runs = {245540, 245542, 245543, 245544, 245545, 245554,
+            245145, 245146, 245148, 245151, 245152, 245231, 245232, 245233,
+            245259, 245343, 245345, 245346, 245347, 245349, 245353};
+  }
+ 
   else {
     return std::set<int>();
   }
