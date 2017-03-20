@@ -7,7 +7,7 @@ Provides a gaussian fitting model.
 
 import numpy as np
 from lmfit import Model, Parameters
-from post_analysis.pionpion.fit import fitfunc_qinv_gauss
+from pionpion.fit import fitfunc_qinv_gauss
 
 HBAR_C = 0.1973269788 # GeV·fm
 
@@ -150,7 +150,8 @@ class GaussianModelCoulomb(Model):
     @classmethod
     def as_resid(cls, p, q_inv, ratio, errs):
         model = cls.gauss(q_inv, **p)
-        res = np.sqrt(((ratio - model) ** 2 / errs ** 2).astype(np.float64))
+        diffs = ratio - model
+        res = np.sqrt((diffs ** 2 / errs ** 2).astype(np.float64))
         return res
 
     @classmethod
@@ -189,7 +190,8 @@ class GaussianModelFSI(Model):
         $$\eta = \frac{1}{k a}$$
         $$a_{\pi} = \pm 387.5fm$$
         """
-
+        if np.shape(x)[0] == 1:
+            x, = x
         epart = -(x * radius / HBAR_C) ** 2
         exp_factor = 1.0 + np.exp(epart.astype(np.float64))
         fsi_factor = GaussianModelFSI.CC(x)
