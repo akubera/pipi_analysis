@@ -1,11 +1,13 @@
 #!/bin/sh
 
+DOCKER_TAG=${DOCKER_TAG:=aliroot-installed}
+
 docker run --rm -it \
         -v $HOME/.alice:$HOME/.alice \
         -v $HOME/.globus:$HOME/.globus \
         -v $HOME/development/physics/pipi_analysis:$HOME/analysis \
 	-v /alice:/alice  \
-        aliroot-installed \
+        ${DOCKER_TAG} \
         /bin/bash
 
 

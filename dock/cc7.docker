@@ -1,0 +1,32 @@
+#!/usr/bin/env php
+<?php
+#
+#  Use PHP as template system for docker file
+#
+
+$USER = getenv("USER");
+$UID = exec('id -u');
+$HOME = getenv("HOME");
+
+?>#
+# Start from CERN's CentOS image
+FROM cern/cc7-base
+
+
+# Install requirements
+RUN yum install -y gcc gcc-c++ gcc-gfortran make environment-modules flex bison \
+                   gettext-devel bzip2-devel ncurses-devel openssl-devel \
+                   perl-ExtUtils-Embed mesa-libGL-devel libXpm-devel mesa-libGLU-devel libXft-devel \
+		   python-pip git tar automake libtool texinfo bzip2
+
+# install alibuild program
+RUN pip install alibuild==1.4.0.rc1
+
+# create user with same home directory path
+RUN useradd -d<?=$HOME?> -u<?=$UID?> <?=$USER?>
+
+# run with current username
+USER <?=$USER?>
+
+WORKDIR <?=$HOME?>
+
