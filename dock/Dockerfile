@@ -12,13 +12,13 @@ RUN  apt-get install -y \
 
 RUN apt-get install -y libbz2-dev libtool-bin texinfo automake autopoint libxml2-dev flex bison libssl-dev
 
-RUN apt-get install -y gcc-4.9 g++-4.9 gfortran-4.9
-RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.9 50 \
-                          --slave /usr/bin/g++ g++ /usr/bin/g++-4.9 \
-                          --slave /usr/bin/gfortran gfortran /usr/bin/gfortran-4.9
+#RUN apt-get install -y gcc-4.9 g++-4.9 gfortran-4.9
+#RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.9 50 \
+#                          --slave /usr/bin/g++ g++ /usr/bin/g++-4.9 \
+#                          --slave /usr/bin/gfortran gfortran /usr/bin/gfortran-4.9
 
 #RUN pip install alibuild
-RUN pip install git+https://github.com/alisw/alibuild.git@v1.4.0.rc1
+RUN pip install git+https://github.com/alisw/alibuild.git@v1.4.0
 
 RUN useradd -d/home/akubera -u10000 -ms /bin/bash akubera
 
