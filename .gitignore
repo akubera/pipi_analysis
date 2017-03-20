@@ -44,6 +44,10 @@ __pycache__
 data
 
 venv*/
+.idea
+.vscode
+/tags
+.cache
 
 callgrind.out*
 valgrind*
