@@ -10,8 +10,8 @@ CommonConfig()
 {
   macro_config = ""
   "\""
-    "+p; "
-    "{0:10:50}; "
+    "+p; +m;"
+    "{0:10}; "
 
     "~do_avg_sep_cf = false; "
     "~do_deltaeta_deltaphi_cf = false; "

@@ -13,7 +13,7 @@ TDatime date;
 
 TString grid_output_dir = "output";
 TString grid_working_dir = "work_pipi";
-TString subdir = "kCentrality";
+TString subdir = "pp0";
 
 TString runmode =
   "full";
@@ -61,7 +61,7 @@ bool is_2015_data;
 TString macro_config;
 Int_t collision_trigger;
 
-TString aliphysics_version = "vAN-20160203-1";
+TString aliphysics_version = "vAN-20160209-1";
 
 TString output_filename = "PiPi_Analysis_Results.root";
 TString xml_filename =
@@ -81,7 +81,8 @@ int use_runs[] = // {170163, 0};
   246942, 246937, 246930, 246928, 246871, 246870, 246867, 246865, 246864,
   246859, 246858, 246855, 246851, 246847, 0 };
 */
- { 244918, 0 };
+ // LHC15o (++) pp.0
+ { 244918, 244982, 244983, 0 };
 
 void
 RunGrid()
@@ -158,7 +159,7 @@ RunGrid()
 
   alienHandler->SetMaxMergeFiles(30);
   alienHandler->SetMaxMergeStages(3);
-  alienHandler->SetSplitMaxInputFileNumber(10);
+  alienHandler->SetSplitMaxInputFileNumber(4);
 
   mgr->SetGridHandler(alienHandler);
 
