@@ -8,7 +8,7 @@ RUN  apt-get install -y \
       curl build-essential git environment-modules \
       python-pip libperl-dev \
       libx11-dev libxpm-dev libxext-dev libxft-dev libglu1-mesa-dev libncurses-dev \
-      cmake swig libfreetype6-dev zlibc openssl
+      cmake swig libfreetype6-dev zlibc openssl libcurl4-openssl-dev
 
 RUN apt-get install -y libbz2-dev libtool-bin texinfo automake autopoint libxml2-dev flex bison libssl-dev
 
