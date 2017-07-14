@@ -4,13 +4,25 @@ from ubuntu:xenial
 RUN apt-get update && \
     apt-get upgrade -y 
 
-RUN  apt-get install -y \
-      curl build-essential git environment-modules \
-      python-pip libperl-dev \
+RUN apt-get install -y \
+      curl	\
+      git	\
+      cmake	\
+      openssl	\
+      automake	\
+      autopoint	\
+      flex	\
+      bison	\
+      texinfo	\
+      python-pip	\
+      build-essential	\
+      gfortran-5	\
+      libperl-dev	\
+      environment-modules	\
       libx11-dev libxpm-dev libxext-dev libxft-dev libglu1-mesa-dev libncurses-dev \
-      cmake swig libfreetype6-dev zlibc openssl libcurl4-openssl-dev
+      libfreetype6-dev zlibc libcurl4-openssl-dev libssl-dev \
+      libxml2-dev libtool-bin libbz2-dev
 
-RUN apt-get install -y libbz2-dev libtool-bin texinfo automake autopoint libxml2-dev flex bison libssl-dev
 
 #RUN apt-get install -y gcc-4.9 g++-4.9 gfortran-4.9
 #RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-4.9 50 \
@@ -22,13 +34,15 @@ RUN pip install git+https://github.com/alisw/alibuild.git@v1.4.0
 
 RUN useradd -d/home/akubera -u10000 -ms /bin/bash akubera
 
-RUN apt-get remove -y cmake
+RUN ln -s gfortran-5 /usr/bin/gfortran
+#RUN apt-get remove -y cmake
 
 USER akubera
 WORKDIR /home/akubera
 
+RUN mkdir -p .config/alibuild/disable-analytics
+RUN git config --global credential.helper 'cache --timeout=3600'
 
-#RUN git clone https://github.com/alisw/alidist.git
 
 #RUN aliBuild build boost
 #RUN aliBuild build gsl
