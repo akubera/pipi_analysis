@@ -325,7 +325,8 @@ load_sim_LHC16k3b2(TChain *input_files=NULL)
   // std::vector<int> numbers = {1, 2, 3, 4, 5, 6, 999};
   // for (int number : numbers) {
 
-  int numbers[] =  {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 24, 999, 17149, 0};
+  // int numbers[] =  {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 24, 999, 17149, 0};
+  int numbers[] =  {1, 2, 0};
   for (int *num_ptr = numbers, number = *num_ptr; number > 0; number = *++num_ptr) {
     const TString filename = TString::Format("/alice/sim/2016/LHC16k3b2/246751/%03d/AliAOD.root", number);
     std::cout << " Adding: " << filename << "\n";
