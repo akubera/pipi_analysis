@@ -29,7 +29,7 @@ run_grid: RunGrid.C
 	aliroot -q -x $<
 
 run-mc:
-	aliroot -q -x src/RunMC.C
+	aliroot -q -x src/RunMc.C
 
 %.C: src/%.C
 	cp $< $@
@@ -37,3 +37,4 @@ run-mc:
 
 clean:
 	rm -rf *.o AutoDict*
+
