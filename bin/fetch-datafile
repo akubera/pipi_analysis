@@ -1,0 +1,55 @@
+#!/usr/bin/env python
+#
+# fetch-datafile
+#
+# Attempt to download files from alice grid
+#
+
+import sys
+from pathlib import Path
+from zipfile import ZipFile
+
+def arg_parser():
+    from argparse import ArgumentParser
+    parser = ArgumentParser()
+    parser.add_argument("files", nargs="+", help="Files to download")
+    parser.add_argument("-f", '--force', action="store_true",
+                        help="Download files even if file exists locally")
+    parser.add_argument("-Z", '--no-unzip', action="store_false", dest='zip',
+                        help="If downloading a zipfile, do NOT unzip it")
+    return parser
+
+
+def main(argv=None):
+    if argv is None:
+        argv = sys.argv[1:]
+    args = arg_parser().parse_args(argv)
+    from ROOT import TAlien, TFile
+
+    alien = TAlien.Connect("alien://alice.cern.ch")
+    for path in map(Path, args.files):
+
+        if not path.exists():
+            print("Attempting to fetch", path)
+
+            # alifile = TAlien.Connect("alien://%s" % path)
+            gridpath = "alien://%s" % path
+            localpath = "file://%s" % path
+            alifile = TFile.Open(gridpath)
+            if not alifile:
+                continue
+            path.parent.mkdir(parents=True, exist_ok=True)
+            TFile.Cp(gridpath, localpath)
+
+            print(path, "copied", end='')
+            if path.suffix == ".zip":
+                with ZipFile(str(path), 'r') as archive:
+                    archive.extractall(path=str(path.parent))
+                print("... and extracted")
+            else:
+                print()
+
+
+
+if __name__ == "__main__":
+    main()
