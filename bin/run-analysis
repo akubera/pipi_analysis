@@ -1,0 +1,103 @@
+#!/usr/bin/env python
+#
+# run-analysis
+#
+# run analysis with dataset and configuration
+#
+
+import os
+import sys
+import glob
+import json
+from pathlib import Path
+from datetime import datetime
+
+
+def arg_parser():
+    from argparse import ArgumentParser
+    parser = ArgumentParser()
+    parser.add_argument("configuration", help="Configuration file")
+    parser.add_argument("--dataset", nargs='?', help="Try to load files from this dataset")
+    parser.add_argument("--out", help="Destination file")
+    parser.add_argument("--name", help="Analysis Name")
+    parser.add_argument("--grid", action="store_true", help="Run this analysis on the grid")
+    return parser
+
+
+def main(argv=None):
+    if argv is None:
+        argv = sys.argv[1:]
+    args = arg_parser().parse_args(argv)
+    print(args)
+
+    setup_env_ROOT()
+    import ROOT
+    from ROOT import gROOT, AliAnalysisManager, AliAODInputHandler
+
+    mgr = AliAnalysisManager("mgr", "My Analysis Manager");
+    print(mgr)
+
+    is_mc_analysis = True
+
+    input_handler = AliAODInputHandler();
+    input_handler.CreatePIDResponse(is_mc_analysis);
+    mgr.SetInputEventHandler(input_handler)
+
+    gROOT.LoadMacro("$ALICE_ROOT/ANALYSIS/macros/AddTaskPIDResponse.C")
+    from ROOT import AddTaskPIDResponse
+    AddTaskPIDResponse(is_mc_analysis)
+
+    from ROOT import AliVEvent
+    collision_trigger = AliVEvent.kMB | AliVEvent.kCentral | AliVEvent.kSemiCentral
+
+    from ROOT import AliAnalysisTaskFemto
+    # macro_filename = "$ALICE_PHYSICS/PWGCF/FEMTOSCOPY/macros/Train/PionPionFemto/ConfigFemtoAnalysis.C"
+    macro_filename = "$ALICE_PHYSICS/PWGCF/FEMTOSCOPY/macros/Train/PionPionFemto/ConfigMomentumResolutionAnalysis.C"
+    # macro_config = "\"+p\""
+    macro_config = '"@verbose=true;"'
+    pipi_task = AliAnalysisTaskFemto("PiPiTask", macro_filename, macro_config, True)
+    pipi_task.SelectCollisionCandidates()
+    # pipi_task.SetCollisionCandidate(collision_trigger)
+    # pipi_task.SetSelectedTriggerClass(collision_trigger)
+
+    os.chdir("OUTPUT-RESULTS")
+
+    output_filename = "%s.root" % datetime.now().strftime("%y%m%d-%H%M%S")
+    femtolist = mgr.CreateContainer("femtolist", ROOT.TList.Class(), AliAnalysisManager.kOutputContainer, output_filename)
+
+    mgr.AddTask(pipi_task)
+
+    mgr.ConnectOutput(pipi_task, 0, femtolist)
+    mgr.ConnectInput(pipi_task, 0, mgr.GetCommonInputContainer())
+
+    if not mgr.InitAnalysis():
+        print("Error initializing analysis. Aborting.", file=sys.stderr)
+        return 1
+
+    mgr.PrintStatus()
+
+    from ROOT import TChain
+
+    input_chain = TChain("aodTree")
+    input_chain.Add("/alice/sim/2013/LHC13d2/139105/AOD/001/AliAOD.root")
+    input_chain.Add("/alice/sim/2013/LHC13d2/139105/AOD/003/AliAOD.root")
+
+    mgr.StartAnalysis("local", input_chain)
+
+
+
+
+
+
+def setup_env_ROOT():
+    from ROOT import gInterpreter, gSystem, gROOT
+
+    gInterpreter.AddIncludePath("$ALICE_ROOT/include")
+    gInterpreter.AddIncludePath("$ALICE_PHYSICS/include")
+
+    gSystem.Load("libPWGCFfemtoscopy.so")
+    gSystem.Load("libPWGCFfemtoscopyUser.so")
+
+
+if __name__ == "__main__":
+    main()
