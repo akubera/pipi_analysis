@@ -78,6 +78,8 @@ int use_runs[] = {170163, 0};
 // int use_runs[]= {170593, 170572, 170388, 170387, 170315, 170313, 170312, 170311, 170309, 170308, 170306, 170270, 170269, 170268, 170230, 170228, 170207, 170204, 170203, 170193, 170163, 0};
 //  int good_runs[21]={170593, 170572, 170388, 170387, 170315, 170313, 170312, 170311, 170309, 170308, 170306, 170270, 170269, 170268, 170230, 170228, 170207, 170204, 170203, 170193, 170163};
 
+TChain* load_file_set(TChain *input_files = NULL);
+
 void
 RunMe()
 {
@@ -277,7 +279,7 @@ load_files(TChain *input_files = NULL)
 }
 
 TChain*
-load_file_set(TChain *input_files = NULL)
+load_file_set(TChain *input_files)
 {
   if (!input_files) {
     input_files = new TChain("aodTree");

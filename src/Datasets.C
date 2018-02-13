@@ -217,8 +217,7 @@ TChain* load_local_data(const TString &name)
   std::vector<int> numbers;
   TString format;
   bool is_mc = false;
-
-  int data_year = 2000 + name(3, 2).String().Atoi();
+  int data_year = 2000 + TString(name(3, 2)).Atoi(); 
   if (name  == "LHC15o") {
     format = "/alice/data/2015/LHC15o/000246001/pass1/AOD/%03d/AliAOD.root";
     numbers = {1, 2, 3};
@@ -232,6 +231,7 @@ TChain* load_local_data(const TString &name)
     numbers = {1, 2, 3, 4, 5, 11, 20, 29, 33, 38, 45, 49, 70, 0};
     format = "/alice/sim/2016/LHC16g1/245505/AOD/%03d/AliAOD.root";
     is_mc = true;
+    std::cout << "Data year : " << data_year << "\n";
     assert(data_year == 2016);
   }
   else if (name == "LHC16k3b2") {

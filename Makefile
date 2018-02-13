@@ -31,6 +31,9 @@ run_grid: RunGrid.C
 run-mc:
 	aliroot -q -x src/RunMc.C
 
+run-%: src/%.C
+	aliroot -q -x $<
+
 %.C: src/%.C
 	cp $< $@
 

@@ -2,7 +2,7 @@
 # pionpion/femtolist.py
 #
 
-from .root_helpers import get_root_object
+from stumpy.utils import get_root_object, is_null
 from .analysis import Analysis
 from os.path import basename
 import ROOT
@@ -22,7 +22,7 @@ class Femtolist:
         'PWG2FEMTO',
     ]
 
-    def __init__(self, file):
+    def __init__(self, file, listpath=None):
         """
         Construct femtolist from file; given either a TFile or the
         path to the file.
@@ -33,7 +33,9 @@ class Femtolist:
             file = ROOT.TFile(str(file), "READ")
 
         # find the femtolist
-        femtolist = get_root_object(file, self.FEMTOLIST_PATHS)
+        if listpath is None:
+            listpath = self.FEMTOLIST_PATHS
+        femtolist = get_root_object(file, listpath)
         if femtolist == None:
             raise ValueError("Could not find a femtolist in %r" % (file))
 
@@ -61,10 +63,12 @@ class Femtolist:
             obj = self._femtolist.At(idx)
         elif isinstance(idx, str):
             obj = self._femtolist.FindObject(idx)
+        elif isinstance(idx, slice):
+            return [Analysis(obj) for obj in self._femtolist[idx]]
         else:
             obj = None
 
-        if obj == None:
+        if is_null(obj):
             raise KeyError("No analysis found with index `{}`".format(idx))
 
         return Analysis(obj)

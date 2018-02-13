@@ -8,7 +8,7 @@
 void
 CommonConfig()
 {
-  is_mc_analysis = false;
+  is_mc_analysis = true; // false;
 
   macro_config = ""
   "\""
@@ -17,9 +17,9 @@ CommonConfig()
     //"{0:10:20}; "
     // "{0:5:10:20:30,0:10}; "
 
-    "@verbose = false; "
+    "@verbose = true; "
     "~do_avg_sep_cf = false; "
-    "~do_q3d_cf = false; "
+    "~do_q3d_cf = true; "
     "~do_kt_q3d = false; "
 
     "~do_trueq_cf = false; "

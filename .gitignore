@@ -1,13 +1,16 @@
 
 *.root
 *.xml
+*.json
 *.jdl
 *.sh
-*.d
 *.so
-*.o
+*.[aod]
+*.pcm
 *.txt
 *.py[co]
+
+*.ipynb
 
 *.png
 *.pdf
@@ -32,7 +35,9 @@ nbproject
 myAnalysis.C
 
 AutoDict_*
+tempChecksum_*/
 
+build/
 output
 runs
 
@@ -48,8 +53,10 @@ venv*/
 .vscode
 /tags
 .cache
+*.log
 
 callgrind.out*
 valgrind*
 igprof*
 outig*
+
