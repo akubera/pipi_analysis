@@ -1,0 +1,5 @@
+[MASTER]
+ignore = .git
+
+
+disable = C0103,C0111
